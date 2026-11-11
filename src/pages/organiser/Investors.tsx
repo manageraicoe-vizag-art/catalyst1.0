@@ -13,7 +13,7 @@ import { InvestorForm } from '../Join'
 import { rowStatus, useLookups } from './shared'
 
 export function InvestorsPage() {
-  const { investors, requests, handling, settings, reload, canEdit } = useOrganiser()
+  const { investors, requests, handling, settings, reload, canEdit, deckViews } = useOrganiser()
   const { startupById } = useLookups()
   const { toast } = useToast()
   const [q, setQ] = useState('')
@@ -146,6 +146,18 @@ export function InvestorsPage() {
                     ) : (
                       <p className="mb-3 text-sm text-slate-500">No active requests.</p>
                     )}
+                    {(() => {
+                      const opened = deckViews.filter((v) => v.investorId === i.id)
+                      return opened.length ? (
+                        <p className="mb-3 text-sm text-slate-700">
+                          <span className="text-slate-500">Opened decks:</span>{' '}
+                          {opened
+                            .map((v) => startupById.get(v.startupId)?.name)
+                            .filter(Boolean)
+                            .join(', ')}
+                        </p>
+                      ) : null
+                    })()}
                     <p className="mb-3 text-xs text-slate-500">
                       Registered {timeAgo(i.createdAt)} {i.createdBy === 'organiser' ? '(pre-registered by RTIH)' : ''}
                     </p>

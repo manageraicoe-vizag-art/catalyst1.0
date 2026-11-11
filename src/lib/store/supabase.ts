@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { DEFAULT_SETTINGS, STORAGE_PREFIX } from '../constants'
 import type {
   ActionType,
+  DeckView,
   EventSettings,
   InterestRequest,
   Investor,
@@ -40,10 +41,11 @@ const toStartup = (r: Row): Startup => ({
   onePagerUrl: r.one_pager_url,
   status: r.status,
   hidden: r.hidden,
+  deckAvailable: r.deck_available === true,
   updatedAt: r.updated_at,
 })
 
-const fromStartup = (s: StartupDraft): Row => {
+const fromStartup = (s: StartupDraft, hasDeckColumn: boolean): Row => {
   const row: Row = {
     name: s.name,
     sector: s.sector,
@@ -65,8 +67,18 @@ const fromStartup = (s: StartupDraft): Row => {
   if (s.position !== undefined) row.position = s.position
   if (s.status) row.status = s.status
   if (s.hidden !== undefined) row.hidden = s.hidden
+  // Only send the column once the database has it (migration 004), so editing never breaks before then
+  if (hasDeckColumn && s.deckAvailable !== undefined) row.deck_available = s.deckAvailable
   return row
 }
+
+const toDeckView = (r: Row): DeckView => ({
+  investorId: r.investor_id,
+  startupId: r.startup_id,
+  firstViewedAt: r.first_viewed_at,
+  lastViewedAt: r.last_viewed_at,
+  views: r.views,
+})
 
 const toPrivate = (r: Row): StartupPrivate => ({
   startupId: r.startup_id,
@@ -163,6 +175,8 @@ export class SupabaseStore implements Store {
   /** Separate auth sessions so an organiser and an investor can share a browser. */
   private inv: SupabaseClient
   private org: SupabaseClient
+  /** true once migration 004 (deck viewing) is installed */
+  private hasDeckColumn = false
 
   constructor(url: string, anonKey: string) {
     this.inv = createClient(url, anonKey, {
@@ -271,6 +285,17 @@ export class SupabaseStore implements Store {
     return (rows ?? []).map(toLive)
   }
 
+  async openDeck(startupId: string) {
+    const url = check(await this.inv.rpc('open_deck', { p_startup: startupId }))
+    if (typeof url !== 'string' || !url) throw new Error('This deck is not available to view.')
+    return url
+  }
+
+  async orgListDeckViews() {
+    const res = await this.org.from('deck_views').select('*')
+    return res.error ? [] : (res.data ?? []).map(toDeckView)
+  }
+
   async listFundSuggestions() {
     // Falls back to the curated list if the database function is not installed yet.
     const res = await this.inv.rpc('fund_suggestions')
@@ -308,7 +333,9 @@ export class SupabaseStore implements Store {
   }
 
   async orgListStartups() {
-    return (check(await this.org.from('startups').select('*').order('position')) ?? []).map(toStartup)
+    const rows = check(await this.org.from('startups').select('*').order('position')) ?? []
+    if (rows[0]) this.hasDeckColumn = 'deck_available' in rows[0]
+    return rows.map(toStartup)
   }
 
   async orgListStartupPrivate() {
@@ -316,7 +343,7 @@ export class SupabaseStore implements Store {
   }
 
   async orgSaveStartup(draft: StartupDraft, priv?: PrivateDraft) {
-    const row = fromStartup(draft)
+    const row = fromStartup(draft, this.hasDeckColumn)
     if (!draft.id && draft.position === undefined) {
       const last = check(await this.org.from('startups').select('position').order('position', { ascending: false }).limit(1))
       row.position = ((last?.[0]?.position as number) ?? 0) + 1

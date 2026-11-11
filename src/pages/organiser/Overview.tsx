@@ -47,7 +47,7 @@ function Legend() {
 }
 
 export function OverviewPage() {
-  const { startups, investors, requests, handling, live } = useOrganiser()
+  const { startups, investors, requests, handling, live, deckViews } = useOrganiser()
   const [view, setView] = useState<'chart' | 'table'>('chart')
   const [hover, setHover] = useState<string | null>(null)
 
@@ -106,13 +106,14 @@ export function OverviewPage() {
         }
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         <StatTile label="Investors" value={investors.length} to="/organiser/investors" />
         <StatTile label="Funds" value={fundCount} />
         <StatTile label="Active requests" value={active.length} />
         <StatTile label="Awaiting action" value={awaiting} to="/organiser" />
         <StatTile label="Meetings approved" value={approvedMeetings} to="/organiser/meetings" />
         <StatTile label="Decks shared" value={decksShared} />
+        <StatTile label="Deck views" value={deckViews.reduce((n, v) => n + v.views, 0)} hint={`${new Set(deckViews.map((v) => v.investorId)).size} investors`} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
@@ -199,6 +200,7 @@ export function OverviewPage() {
                       </th>
                     ))}
                     <th className="py-2 pr-2 text-right font-medium">Funds</th>
+                    <th className="py-2 pr-2 text-right font-medium">Opened deck</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,6 +214,9 @@ export function OverviewPage() {
                         </td>
                       ))}
                       <td className="py-1.5 pr-2 text-right font-medium text-slate-950">{funds}</td>
+                      <td className="py-1.5 pr-2 text-right text-slate-800">
+                        {s.deckAvailable ? deckViews.filter((v) => v.startupId === s.id).length : '–'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

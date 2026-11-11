@@ -1,5 +1,6 @@
 import type {
   ActionType,
+  DeckView,
   EventSettings,
   InterestRequest,
   Investor,
@@ -14,8 +15,8 @@ import type {
   Topic,
 } from '../types'
 
-export type StartupDraft = Omit<Startup, 'id' | 'position' | 'updatedAt' | 'status' | 'hidden'> &
-  Partial<Pick<Startup, 'id' | 'position' | 'status' | 'hidden'>>
+export type StartupDraft = Omit<Startup, 'id' | 'position' | 'updatedAt' | 'status' | 'hidden' | 'deckAvailable'> &
+  Partial<Pick<Startup, 'id' | 'position' | 'status' | 'hidden' | 'deckAvailable'>>
 
 export type PrivateDraft = Omit<StartupPrivate, 'startupId'>
 
@@ -47,6 +48,8 @@ export interface Store {
   listLiveInterest(): Promise<LiveInterest[]>
   /** Fund names investors have already entered (names only), for teammates to pick. */
   listFundSuggestions(): Promise<string[]>
+  /** Deck link for a startup whose deck is switched on (records the view for RTIH). */
+  openDeck(startupId: string): Promise<string>
 
   // ---- organiser ----
   getOrganiser(): Promise<Organiser | null>
@@ -74,6 +77,7 @@ export interface Store {
   orgListNotices(): Promise<Notice[]>
   orgSaveSettings(settings: EventSettings): Promise<EventSettings>
   orgLiveInterest(): Promise<LiveInterest[]>
+  orgListDeckViews(): Promise<DeckView[]>
 
   /** Calls `cb` when data in a topic may have changed (realtime or cross-tab). */
   subscribe(audience: Audience, cb: (topic: Topic) => void): () => void

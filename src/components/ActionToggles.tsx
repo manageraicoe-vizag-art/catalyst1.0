@@ -1,4 +1,6 @@
-import { CalendarPlus, Check, FileText, Handshake, Loader2 } from 'lucide-react'
+import { CalendarPlus, Check, Eye, FileText, Handshake, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { DeckViewer } from './DeckViewer'
 import { reqKey, useInvestor } from '../context/Investor'
 import { ACTION_HELP, ACTION_LABEL, ACTION_SHORT } from '../lib/constants'
 import { ACTION_TYPES, type ActionType, type Startup } from '../lib/types'
@@ -13,10 +15,49 @@ export const ACTION_ICON: Record<ActionType, typeof FileText> = {
 /** Three independent toggles. Each tap saves immediately. */
 export function ActionToggles({ startup, layout = 'compact' }: { startup: Startup; layout?: 'compact' | 'full' }) {
   const { requests, pending, toggle } = useInvestor()
+  const [viewing, setViewing] = useState(false)
 
   return (
     <div className={cn('grid gap-2', layout === 'compact' ? 'grid-cols-3' : 'grid-cols-1')}>
       {ACTION_TYPES.map((type) => {
+        if (type === 'deck' && startup.deckAvailable)
+          return (
+            <button
+              key="view-deck"
+              type="button"
+              onClick={() => setViewing(true)}
+              className={cn(
+                'group relative flex rounded-xl text-left ring-1 ring-inset ring-brand-500 transition-all hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 active:scale-[0.98]',
+                layout === 'compact'
+                  ? 'min-h-[60px] flex-col items-center justify-center gap-1 bg-slate-100 px-1.5 py-2 text-center text-brand-900'
+                  : 'items-start gap-3 bg-slate-100 p-3.5 text-slate-800',
+              )}
+            >
+              <span
+                className={cn(
+                  'flex shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-300',
+                  layout === 'compact' ? 'h-6 w-6' : 'mt-0.5 h-8 w-8',
+                )}
+              >
+                <Eye className="h-4 w-4" aria-hidden />
+              </span>
+              {layout === 'compact' ? (
+                <span className="text-[12.5px] font-semibold leading-tight sm:text-[13px]">View deck</span>
+              ) : (
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-[15px] font-semibold text-slate-950">View pitch deck</span>
+                    <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-900 ring-1 ring-inset ring-brand-300">
+                      No request needed
+                    </span>
+                  </span>
+                  <span className="mt-1 block text-[13px] leading-snug text-slate-500">
+                    Opens here, with a link to open it in a new tab. RTIH can see which decks you open; founders are not notified.
+                  </span>
+                </span>
+              )}
+            </button>
+          )
         const k = reqKey(startup.id, type)
         const on = !!requests.get(k)?.active
         const busy = pending.has(k)
@@ -75,6 +116,7 @@ export function ActionToggles({ startup, layout = 'compact' }: { startup: Startu
           </button>
         )
       })}
+      <DeckViewer startup={startup} open={viewing} onClose={() => setViewing(false)} />
     </div>
   )
 }

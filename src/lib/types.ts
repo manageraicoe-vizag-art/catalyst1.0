@@ -46,6 +46,8 @@ export interface Startup {
   onePagerUrl: string
   status: StartupStatus
   hidden: boolean
+  /** Investors can open the pitch deck in the app (no request needed) */
+  deckAvailable: boolean
   updatedAt: string
 }
 
@@ -126,6 +128,15 @@ export interface LiveInterest {
 
 export type OrganiserRole = 'editor' | 'viewer'
 
+/** An investor opened a startup's deck (organiser analytics). */
+export interface DeckView {
+  investorId: string
+  startupId: string
+  firstViewedAt: string
+  lastViewedAt: string
+  views: number
+}
+
 export interface Organiser {
   email: string
   name: string
@@ -142,3 +153,4 @@ export type Topic =
   | 'notices'
   | 'investors'
   | 'private'
+  | 'deckViews'

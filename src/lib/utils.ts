@@ -96,6 +96,25 @@ export function canonicalFund(typed: string, options: string[]): string {
   return options.find((o) => normFund(o) === key) ?? typed.trim().replace(/\s+/g, ' ')
 }
 
+/**
+ * How to show a deck link inside the app. Google Drive/Slides/Canva get their embed views;
+ * SharePoint/OneDrive refuse to be embedded, so those only get an "Open" button.
+ */
+export function deckEmbed(url: string): { embed: string | null; open: string } {
+  const u = url.trim()
+  const drive =
+    /drive\.google\.com\/file\/d\/([\w-]+)/.exec(u) ||
+    /docs\.google\.com\/(?:presentation|document|spreadsheets)\/d\/([\w-]+)/.exec(u) ||
+    /drive\.google\.com\/open\?id=([\w-]+)/.exec(u)
+  if (drive) return { embed: `https://drive.google.com/file/d/${drive[1]}/preview`, open: u }
+  const folder = /drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([\w-]+)/.exec(u)
+  if (folder) return { embed: `https://drive.google.com/embeddedfolderview?id=${folder[1]}#grid`, open: u }
+  if (/canva\.com\/design\/[^/]+\/[^/]+\/view/.test(u)) return { embed: u.split('?')[0] + '?embed', open: u }
+  if (/sharepoint\.com|onedrive\.live\.com|1drv\.ms|canva\.link|docsend\.com/.test(u)) return { embed: null, open: u }
+  if (/^https?:\/\//i.test(u)) return { embed: u, open: u }
+  return { embed: null, open: u }
+}
+
 export function initials(name: string): string {
   return (
     name

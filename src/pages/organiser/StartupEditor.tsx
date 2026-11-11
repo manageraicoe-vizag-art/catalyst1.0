@@ -6,6 +6,7 @@ import { useToast } from '../../context/Toast'
 import { store } from '../../lib/store'
 import type { PrivateDraft, StartupDraft } from '../../lib/store/types'
 import type { Startup, StartupStatus } from '../../lib/types'
+import { cn } from '../../lib/utils'
 
 const BLANK: StartupDraft = {
   name: '',
@@ -23,6 +24,7 @@ const BLANK: StartupDraft = {
   team: '',
   ask: '',
   onePagerUrl: '',
+  deckAvailable: false,
 }
 const BLANK_PRIV: PrivateDraft = { deckUrl: '', contactName: '', contactEmail: '', contactPhone: '', notes: '' }
 
@@ -46,7 +48,7 @@ export function StartupEditor({
     if (!open) return
     setConfirmDelete(false)
     if (startup) {
-      const { updatedAt: _u, ...rest } = startup
+      const { updatedAt: _u, ...rest } = startup // includes deckAvailable
       void _u
       setD(rest)
       const pv = privates.get(startup.id)
@@ -66,12 +68,14 @@ export function StartupEditor({
       return
     }
     setBusy(true)
+    // A deck can only be shown when there is a link to show
+    const draft = p.deckUrl.trim() ? d : { ...d, deckAvailable: false }
     try {
       if (d.status === 'pitching' && startup?.status !== 'pitching') {
-        await store.orgSaveStartup({ ...d, status: startup?.status ?? 'queued' }, p)
+        await store.orgSaveStartup({ ...draft, status: startup?.status ?? 'queued' }, p)
         if (startup) await store.orgSetPitching(startup.id)
       } else {
-        await store.orgSaveStartup(d, p)
+        await store.orgSaveStartup(draft, p)
       }
       await Promise.all([reload('startups'), reload('private')])
       toast({ title: startup ? 'Startup updated' : 'Startup added', body: 'Investors see the change immediately.' })
@@ -192,9 +196,41 @@ export function StartupEditor({
         <Lock className="h-3.5 w-3.5" aria-hidden /> Organisers only
       </h3>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Pitch deck link" className="sm:col-span-2" hint="Never shown to investors. Shared per request when you approve a deck request." htmlFor="se-deck">
+        <Field
+          label="Pitch deck link"
+          className="sm:col-span-2"
+          hint="Use a view-only link (Google Drive: “Anyone with the link can view”)."
+          htmlFor="se-deck"
+        >
           <Input id="se-deck" value={p.deckUrl} onChange={fp('deckUrl')} placeholder="https://drive.google.com/…" />
         </Field>
+        <label
+          className={cn(
+            'flex items-start gap-3 rounded-xl p-3 ring-1 ring-inset sm:col-span-2',
+            d.deckAvailable ? 'bg-brand-50 ring-brand-300' : 'bg-slate-100 ring-slate-200',
+            !p.deckUrl.trim() && 'opacity-60',
+          )}
+        >
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 accent-[#ffacb7]"
+            checked={!!d.deckAvailable && !!p.deckUrl.trim()}
+            disabled={!p.deckUrl.trim()}
+            onChange={(e) => setD((x) => ({ ...x, deckAvailable: e.target.checked }))}
+          />
+          <span className="text-sm">
+            <span className="font-semibold text-slate-950">Show deck to investors</span>
+            <span className="mt-0.5 block text-slate-600">
+              On: registered investors can view the deck in the app and open the link, with no request. Off: they use
+              “Request pitch deck” and RTIH shares it.
+            </span>
+            {/do not forward|clean export/i.test(p.notes) && (
+              <span className="mt-1.5 block font-medium text-amber-800">
+                Note on this startup: its deck file has hidden content. Get a clean copy before switching this on.
+              </span>
+            )}
+          </span>
+        </label>
         <Field label="Founder contact name" htmlFor="se-cn">
           <Input id="se-cn" value={p.contactName} onChange={fp('contactName')} />
         </Field>

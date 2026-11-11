@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS, STORAGE_PREFIX } from '../constants'
 import type {
   ActionType,
+  DeckView,
   EventSettings,
   InterestRequest,
   Investor,
@@ -32,12 +33,13 @@ interface DB {
   requests: InterestRequest[]
   handling: RequestHandling[]
   notices: Notice[]
+  deckViews?: DeckView[]
 }
 
 const DB_KEY = `${STORAGE_PREFIX}:demo-db`
 const ME_KEY = `${STORAGE_PREFIX}:demo-me`
 const ORG_KEY = `${STORAGE_PREFIX}:demo-org`
-const ALL_TOPICS: Topic[] = ['settings', 'startups', 'requests', 'handling', 'live', 'notices', 'investors', 'private']
+const ALL_TOPICS: Topic[] = ['settings', 'startups', 'requests', 'handling', 'live', 'notices', 'investors', 'private', 'deckViews']
 
 function safeGet(key: string): string | null {
   try {
@@ -221,6 +223,32 @@ export class LocalStore implements Store {
     return this.read().investors.map((i) => i.fund)
   }
 
+  async openDeck(startupId: string) {
+    return this.mutate((db) => {
+      // The investor identity wins: in demo mode an organiser may be signed in in the same browser
+      const meId = this.meId()
+      const me = meId ? db.investors.find((i) => i.id === meId) ?? null : null
+      const org = !!safeGet(ORG_KEY)
+      if (!me && !org) throw new Error('Please enter your details first.')
+      const s = db.startups.find((x) => x.id === startupId)
+      const url = db.privates.find((x) => x.startupId === startupId)?.deckUrl ?? ''
+      // investors need the deck switched on; an organiser-only session may preview any deck
+      const allowed = !!s && !!url && (s.deckAvailable || (org && !me))
+      if (!allowed)
+        throw new Error('This deck is not available to view. You can request it from the RTIH team.')
+      if (me) {
+        db.deckViews ??= []
+        const t = nowIso()
+        const v = db.deckViews.find((x) => x.investorId === me.id && x.startupId === startupId)
+        if (v) {
+          v.views++
+          v.lastViewedAt = t
+        } else db.deckViews.push({ investorId: me.id, startupId, firstViewedAt: t, lastViewedAt: t, views: 1 })
+      }
+      return url
+    })
+  }
+
   // ---------- organiser ----------
   async getOrganiser() {
     const raw = safeGet(ORG_KEY)
@@ -276,6 +304,7 @@ export class LocalStore implements Store {
           position: draft.position ?? maxPos + 1,
           status: draft.status ?? 'queued',
           hidden: draft.hidden ?? false,
+          deckAvailable: draft.deckAvailable ?? false,
           updatedAt: t,
         } as Startup
         db.startups.push(s)
@@ -441,6 +470,11 @@ export class LocalStore implements Store {
   async orgLiveInterest() {
     this.requireOrg()
     return computeLive(this.read())
+  }
+
+  async orgListDeckViews() {
+    this.requireOrg()
+    return this.read().deckViews ?? []
   }
 
   // ---------- demo-only helpers ----------

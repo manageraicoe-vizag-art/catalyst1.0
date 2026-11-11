@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { DEFAULT_SETTINGS } from '../lib/constants'
 import { store } from '../lib/store'
 import type {
+  DeckView,
   EventSettings,
   InterestRequest,
   Investor,
@@ -28,6 +29,7 @@ interface OrganiserState {
   handling: Map<string, RequestHandling>
   notices: Notice[]
   live: LiveInterest[]
+  deckViews: DeckView[]
   /** request ids that arrived (or changed) since this dashboard opened, for highlighting */
   fresh: Set<string>
   signIn: (email: string, secret: string) => Promise<void>
@@ -50,6 +52,7 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
   const [handling, setHandling] = useState<Map<string, RequestHandling>>(new Map())
   const [notices, setNotices] = useState<Notice[]>([])
   const [live, setLive] = useState<LiveInterest[]>([])
+  const [deckViews, setDeckViews] = useState<DeckView[]>([])
   const [fresh, setFresh] = useState<Set<string>>(new Set())
   const seen = useRef<Map<string, string> | null>(null)
 
@@ -103,6 +106,9 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
           case 'live':
             setLive(await store.orgLiveInterest())
             break
+          case 'deckViews':
+            setDeckViews(await store.orgListDeckViews())
+            break
         }
       } catch (e) {
         console.warn('organiser refresh failed', topic, e)
@@ -111,7 +117,7 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
     [ingestRequests],
   )
 
-  const ALL: Topic[] = useMemo(() => ['settings', 'startups', 'private', 'investors', 'requests', 'handling', 'notices', 'live'], [])
+  const ALL: Topic[] = useMemo(() => ['settings', 'startups', 'private', 'investors', 'requests', 'handling', 'notices', 'live', 'deckViews'], [])
 
   const reload = useCallback(
     async (topic?: Topic) => {
@@ -195,13 +201,14 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
       handling,
       notices,
       live,
+      deckViews,
       fresh,
       signIn,
       signOut,
       reload,
       setStartups,
     }),
-    [ready, organiser, settings, startups, privates, investors, requests, handling, notices, live, fresh, signIn, signOut, reload],
+    [ready, organiser, settings, startups, privates, investors, requests, handling, notices, live, deckViews, fresh, signIn, signOut, reload],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

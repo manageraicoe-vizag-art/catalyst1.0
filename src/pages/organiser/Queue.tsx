@@ -181,6 +181,7 @@ export function QueuePage() {
                     <p className="truncate font-semibold text-slate-950">{s.name}</p>
                     {s.status === 'pitching' && <Badge tone="go">Pitching</Badge>}
                     {s.status === 'done' && <Badge>Pitched</Badge>}
+                    {s.deckAvailable && <Badge tone="brand">Deck shown</Badge>}
                     {s.hidden && (
                       <Badge tone="amber">
                         <EyeOff className="h-3 w-3" aria-hidden /> Hidden

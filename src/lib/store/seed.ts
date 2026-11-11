@@ -92,6 +92,7 @@ export function buildSeed(): SeedData {
     onePagerUrl: '',
     status: i < 4 ? 'done' : i === 4 ? 'pitching' : 'queued',
     hidden: false,
+    deckAvailable: false,
     updatedAt: iso(120),
   }))
 
