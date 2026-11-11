@@ -12,7 +12,7 @@ import { copyText, personalLink, timeAgo } from '../lib/utils'
 import { InvestorForm } from './Join'
 
 export function MePage() {
-  const { me, startups, requests, notices, settings, toggle, pending, markAllRead, updateMe, forget } = useInvestor()
+  const { me, startups, requests, notices, settings, toggle, pending, markAllRead, updateMe, forget, fundOptions } = useInvestor()
   const { toast } = useToast()
   const [editing, setEditing] = useState(false)
   const [confirmForget, setConfirmForget] = useState(false)
@@ -177,7 +177,7 @@ export function MePage() {
       <Modal open={editing} onClose={() => setEditing(false)} title="Edit my details">
         <InvestorForm
           initial={me}
-          fundSuggestions={settings.participatingFunds}
+          fundSuggestions={fundOptions}
           submitLabel="Save details"
           onSubmit={async (v) => {
             await updateMe(v)

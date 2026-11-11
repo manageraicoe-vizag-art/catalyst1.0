@@ -3,11 +3,13 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Association, IdeasToImpact, Lighthouse, Ribbon, RtihMain, Sparkle } from '../components/Decor'
 import { DemoBanner } from '../components/Layout'
+import { FundCombobox } from '../components/FundCombobox'
 import { Button, Field, Input, Notice, Spinner } from '../components/ui'
 import { useInvestor } from '../context/Investor'
 import { useToast } from '../context/Toast'
 import { ROUTING_NOTE } from '../lib/constants'
 import type { EventSettings, InvestorInput } from '../lib/types'
+import { canonicalFund, normFund } from '../lib/utils'
 
 const EMPTY: InvestorInput = { name: '', fund: '', email: '', phone: '', designation: '' }
 
@@ -27,6 +29,13 @@ export function InvestorForm({
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const set = (k: keyof InvestorInput) => (e: { target: { value: string } }) => setV((x) => ({ ...x, [k]: e.target.value }))
+  const typed = v.fund.trim()
+  const known = !!typed && fundSuggestions.some((f) => normFund(f) === normFund(typed))
+  const fundHint = !typed
+    ? 'Pick your fund from the list, or type it if it is not there'
+    : known
+      ? 'On the list: teammates will see the same name'
+      : 'New fund: it will be saved so your teammates can pick it'
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -40,7 +49,8 @@ export function InvestorForm({
     setBusy(true)
     setFormError(null)
     try {
-      await onSubmit(v)
+      // Same fund typed differently ("sea fund") snaps to the saved spelling ("Seafund")
+      await onSubmit({ ...v, fund: canonicalFund(v.fund, fundSuggestions) })
     } catch (err) {
       setFormError((err as Error).message)
     } finally {
@@ -59,21 +69,9 @@ export function InvestorForm({
           required
           error={errors.fund}
           htmlFor="inv-fund"
-          hint={fundSuggestions.length ? 'Pick from the list so your fund shows correctly on the live board' : undefined}
+          hint={fundHint}
         >
-          <Input
-            id="inv-fund"
-            autoComplete="organization"
-            list="participating-funds"
-            value={v.fund}
-            onChange={set('fund')}
-            placeholder="Start typing your fund"
-          />
-          <datalist id="participating-funds">
-            {fundSuggestions.map((f) => (
-              <option key={f} value={f} />
-            ))}
-          </datalist>
+          <FundCombobox id="inv-fund" value={v.fund} onChange={(fund) => setV((x) => ({ ...x, fund }))} options={fundSuggestions} />
         </Field>
         <Field label="Email" error={errors.email} htmlFor="inv-email">
           <Input id="inv-email" type="email" inputMode="email" autoComplete="email" value={v.email} onChange={set('email')} placeholder="you@fund.com" />
@@ -156,7 +154,7 @@ export function PosterHero({ settings, children }: { settings: EventSettings; ch
 }
 
 export function JoinPage() {
-  const { ready, me, settings, register } = useInvestor()
+  const { ready, me, settings, register, fundOptions } = useInvestor()
   const loc = useLocation()
   const from = (loc.state as { from?: string } | null)?.from ?? '/startups'
 
@@ -177,7 +175,7 @@ export function JoinPage() {
           </p>
           <InvestorForm
             submitLabel="Continue to the startups"
-            fundSuggestions={settings.participatingFunds}
+            fundSuggestions={fundOptions}
             onSubmit={async (v) => {
               // Once `me` is set this page renders <Navigate to={from}>; no second redirect here,
               // or a quick tap elsewhere would be bounced back after the reload finishes.

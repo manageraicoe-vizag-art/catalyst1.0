@@ -484,6 +484,23 @@ begin
 end;
 $$;
 
+-- Fund names already entered by investors, offered as suggestions to teammates.
+-- Exposes fund NAMES only (no investor names or contact details).
+create or replace function public.fund_suggestions()
+returns setof text
+language sql stable security definer
+set search_path = public
+as $$
+  select name from (
+    select distinct on (lower(regexp_replace(trim(fund), '\s+', ' ', 'g')))
+           regexp_replace(trim(fund), '\s+', ' ', 'g') as name, created_at
+    from public.investors
+    where trim(fund) <> ''
+    order by lower(regexp_replace(trim(fund), '\s+', ' ', 'g')), created_at
+  ) f
+  order by lower(name);
+$$;
+
 -- Lets the app tell an organiser login apart from an investor
 create or replace function public.whoami_organiser()
 returns json
@@ -605,6 +622,7 @@ grant execute on function public.reorder_startups(uuid[]) to authenticated;
 grant execute on function public.set_pitching(uuid) to authenticated;
 grant execute on function public.notify_request(uuid) to authenticated;
 grant execute on function public.whoami_organiser() to authenticated;
+grant execute on function public.fund_suggestions() to anon, authenticated;
 grant execute on function public.is_organiser() to anon, authenticated;
 grant execute on function public.can_edit() to anon, authenticated;
 grant execute on function public.organiser_role() to authenticated;

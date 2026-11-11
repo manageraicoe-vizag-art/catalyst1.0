@@ -271,6 +271,13 @@ export class SupabaseStore implements Store {
     return (rows ?? []).map(toLive)
   }
 
+  async listFundSuggestions() {
+    // Falls back to the curated list if the database function is not installed yet.
+    const res = await this.inv.rpc('fund_suggestions')
+    if (res.error || !Array.isArray(res.data)) return []
+    return (res.data as unknown[]).map((x) => (typeof x === 'string' ? x : String((x as Record<string, unknown>).fund_suggestions ?? '')))
+  }
+
   // ---------- organiser ----------
   async getOrganiser(): Promise<Organiser | null> {
     const { data } = await this.org.auth.getSession()

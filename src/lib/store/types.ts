@@ -45,6 +45,8 @@ export interface Store {
   listMyNotices(): Promise<Notice[]>
   markNoticesRead(ids: string[]): Promise<void>
   listLiveInterest(): Promise<LiveInterest[]>
+  /** Fund names investors have already entered (names only), for teammates to pick. */
+  listFundSuggestions(): Promise<string[]>
 
   // ---- organiser ----
   getOrganiser(): Promise<Organiser | null>

@@ -217,6 +217,10 @@ export class LocalStore implements Store {
     return computeLive(this.read())
   }
 
+  async listFundSuggestions() {
+    return this.read().investors.map((i) => i.fund)
+  }
+
   // ---------- organiser ----------
   async getOrganiser() {
     const raw = safeGet(ORG_KEY)

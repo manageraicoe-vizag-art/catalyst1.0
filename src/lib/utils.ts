@@ -73,6 +73,29 @@ function shortDate(ymd: string): string {
   return d.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })
 }
 
+/** Comparison key for fund names: case-, space- and punctuation-insensitive ("Sea Fund" == "seafund"). */
+export function normFund(name: string): string {
+  return name.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '')
+}
+
+/** Merge fund lists, de-duplicated by normFund; the first spelling seen wins (curated lists go first). */
+export function mergeFunds(...lists: string[][]): string[] {
+  const seen = new Map<string, string>()
+  for (const list of lists)
+    for (const raw of list) {
+      const name = raw.trim().replace(/\s+/g, ' ')
+      const key = normFund(name)
+      if (key && !seen.has(key)) seen.set(key, name)
+    }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b))
+}
+
+/** Snap a typed fund to an existing spelling when it is the same fund. */
+export function canonicalFund(typed: string, options: string[]): string {
+  const key = normFund(typed)
+  return options.find((o) => normFund(o) === key) ?? typed.trim().replace(/\s+/g, ' ')
+}
+
 export function initials(name: string): string {
   return (
     name

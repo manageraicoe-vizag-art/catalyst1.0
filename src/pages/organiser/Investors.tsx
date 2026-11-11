@@ -8,7 +8,7 @@ import { useToast } from '../../context/Toast'
 import { ACTION_SHORT } from '../../lib/constants'
 import { store } from '../../lib/store'
 import type { Investor } from '../../lib/types'
-import { cn, copyText, downloadFile, eventLink, personalLink, timeAgo, toCsv } from '../../lib/utils'
+import { cn, copyText, downloadFile, eventLink, mergeFunds, personalLink, timeAgo, toCsv } from '../../lib/utils'
 import { InvestorForm } from '../Join'
 import { rowStatus, useLookups } from './shared'
 
@@ -183,7 +183,7 @@ export function InvestorsPage() {
         <InvestorForm
           key={editing?.id ?? 'new'}
           initial={editing ?? undefined}
-          fundSuggestions={settings.participatingFunds}
+          fundSuggestions={mergeFunds(settings.participatingFunds, investors.map((x) => x.fund))}
           submitLabel={editing ? 'Save' : 'Create & copy personal link'}
           onSubmit={async (v) => {
             if (editing) {

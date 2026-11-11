@@ -12,6 +12,7 @@ import type {
   Startup,
   Topic,
 } from '../lib/types'
+import { mergeFunds } from '../lib/utils'
 import { useToast } from './Toast'
 
 export const reqKey = (startupId: string, type: ActionType) => `${startupId}:${type}`
@@ -26,6 +27,8 @@ interface InvestorState {
   pending: Set<string>
   notices: Notice[]
   live: LiveInterest[]
+  /** Participating funds + funds teammates already entered */
+  fundOptions: string[]
   unread: number
   register: (input: InvestorInput) => Promise<Investor>
   claimInvite: (token: string) => Promise<Investor>
@@ -49,6 +52,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<Set<string>>(new Set())
   const [notices, setNotices] = useState<Notice[]>([])
   const [live, setLive] = useState<LiveInterest[]>([])
+  const [enteredFunds, setEnteredFunds] = useState<string[]>([])
   const knownNotices = useRef<Set<string> | null>(null)
   const pendingRef = useRef(pending)
   pendingRef.current = pending
@@ -100,7 +104,13 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
   )
 
   const reloadAll = useCallback(async () => {
-    const [s, st, m] = await Promise.all([store.getSettings(), store.listStartups(), store.getMe()])
+    const [s, st, m, funds] = await Promise.all([
+      store.getSettings(),
+      store.listStartups(),
+      store.getMe(),
+      store.listFundSuggestions().catch(() => [] as string[]),
+    ])
+    setEnteredFunds(funds)
     setSettings(s)
     setStartups(st)
     setMe(m)
@@ -253,6 +263,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
       pending,
       notices,
       live,
+      fundOptions: mergeFunds(settings.participatingFunds, enteredFunds),
       unread: notices.filter((n) => !n.readAt).length,
       register,
       claimInvite,
@@ -262,7 +273,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
       markAllRead,
       reload: reloadAll,
     }),
-    [ready, error, settings, startups, me, requests, pending, notices, live, register, claimInvite, updateMe, forget, toggle, markAllRead, reloadAll],
+    [ready, error, settings, startups, me, requests, pending, notices, live, enteredFunds, register, claimInvite, updateMe, forget, toggle, markAllRead, reloadAll],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
