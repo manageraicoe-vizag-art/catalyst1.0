@@ -13,7 +13,7 @@ import { InvestorForm } from '../Join'
 import { rowStatus, useLookups } from './shared'
 
 export function InvestorsPage() {
-  const { investors, requests, handling, settings, reload } = useOrganiser()
+  const { investors, requests, handling, settings, reload, canEdit } = useOrganiser()
   const { startupById } = useLookups()
   const { toast } = useToast()
   const [q, setQ] = useState('')
@@ -64,9 +64,11 @@ export function InvestorsPage() {
             <Button variant="secondary" size="sm" icon={<Download className="h-4 w-4" />} onClick={exportCsv}>
               Export CSV
             </Button>
-            <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setAdding(true)}>
-              Pre-register investor
-            </Button>
+            {canEdit && (
+              <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setAdding(true)}>
+                Pre-register investor
+              </Button>
+            )}
           </>
         }
       />
@@ -147,6 +149,7 @@ export function InvestorsPage() {
                     <p className="mb-3 text-xs text-slate-500">
                       Registered {timeAgo(i.createdAt)} {i.createdBy === 'organiser' ? '(pre-registered by RTIH)' : ''}
                     </p>
+                    {canEdit && (
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant="secondary" icon={<Copy className="h-3.5 w-3.5" />} onClick={() => copy(personalLink(i.inviteToken), 'Personal link')}>
                         Personal link
@@ -161,6 +164,7 @@ export function InvestorsPage() {
                         Remove
                       </Button>
                     </div>
+                    )}
                   </div>
                 )}
               </li>

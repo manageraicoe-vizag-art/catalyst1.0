@@ -15,29 +15,58 @@
 create extension if not exists pgcrypto;
 
 -- ---------------------------------------------------------------------
--- Organisers (allow-list by email). Add organisers with:
---   insert into public.organisers (email, name) values ('someone@rtih.in', 'Name');
+-- Organisers (allow-list by email) with a role:
+--   'editor' → full control (approve, notify, edit startups, queue, settings)
+--   'viewer' → read-only overview of everything organisers can see
+-- Add organisers with:
+--   insert into public.organisers (email, name, role) values ('someone@rtih.in', 'Name', 'editor');
 -- They sign in with email + password. Create their login in
 -- Authentication → Users → Add user (tick "Auto confirm user").
+-- New rows default to 'viewer', so a mistake never grants edit rights.
 -- ---------------------------------------------------------------------
 create table if not exists public.organisers (
   email text primary key,
   name text not null default '',
   created_at timestamptz not null default now()
 );
+alter table public.organisers add column if not exists role text not null default 'viewer';
+do $$
+begin
+  alter table public.organisers add constraint organisers_role_check check (role in ('editor', 'viewer'));
+exception when duplicate_object then null;
+end;
+$$;
 
+-- Role of the signed-in user if they are a confirmed organiser, else null
+create or replace function public.organiser_role()
+returns text
+language sql stable security definer
+set search_path = public, auth
+as $$
+  select o.role
+  from auth.users u
+  join public.organisers o on lower(o.email) = lower(u.email)
+  where u.id = auth.uid()
+    and u.email_confirmed_at is not null
+  limit 1;
+$$;
+
+-- Any organiser (editor or viewer): read access
 create or replace function public.is_organiser()
 returns boolean
 language sql stable security definer
 set search_path = public, auth
 as $$
-  select exists (
-    select 1
-    from auth.users u
-    join public.organisers o on lower(o.email) = lower(u.email)
-    where u.id = auth.uid()
-      and u.email_confirmed_at is not null
-  );
+  select public.organiser_role() is not null;
+$$;
+
+-- Editors only: write access
+create or replace function public.can_edit()
+returns boolean
+language sql stable security definer
+set search_path = public, auth
+as $$
+  select coalesce(public.organiser_role() = 'editor', false);
 $$;
 
 -- ---------------------------------------------------------------------
@@ -270,7 +299,7 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if not public.is_organiser() then
+  if not public.can_edit() then
     new.invite_token := old.invite_token;
     new.created_by := old.created_by;
     new.created_at := old.created_at;
@@ -291,7 +320,7 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if not public.is_organiser() then
+  if not public.can_edit() then
     new := old;
     new.read_at := coalesce(old.read_at, now());
   end if;
@@ -401,8 +430,8 @@ language plpgsql security definer
 set search_path = public
 as $$
 begin
-  if not public.is_organiser() then
-    raise exception 'Organisers only';
+  if not public.can_edit() then
+    raise exception 'Organiser editors only';
   end if;
   update public.startups s
      set position = x.ord
@@ -418,8 +447,8 @@ language plpgsql security definer
 set search_path = public
 as $$
 begin
-  if not public.is_organiser() then
-    raise exception 'Organisers only';
+  if not public.can_edit() then
+    raise exception 'Organiser editors only';
   end if;
   update public.startups set status = 'done' where status = 'pitching' and (p_id is null or id <> p_id);
   if p_id is not null then
@@ -439,8 +468,8 @@ declare
   v_h public.request_handling;
   v_n public.notices;
 begin
-  if not public.is_organiser() then
-    raise exception 'Organisers only';
+  if not public.can_edit() then
+    raise exception 'Organiser editors only';
   end if;
   select * into v_req from public.requests where id = p_request_id;
   select * into v_h from public.request_handling where request_id = p_request_id;
@@ -461,7 +490,7 @@ returns json
 language sql stable security definer
 set search_path = public, auth
 as $$
-  select json_build_object('email', o.email, 'name', o.name)
+  select json_build_object('email', o.email, 'name', o.name, 'role', o.role)
   from auth.users u
   join public.organisers o on lower(o.email) = lower(u.email)
   where u.id = auth.uid() and u.email_confirmed_at is not null;
@@ -489,7 +518,7 @@ create policy organisers_select on public.organisers for select using (public.is
 drop policy if exists settings_select on public.event_settings;
 create policy settings_select on public.event_settings for select using (true);
 drop policy if exists settings_update on public.event_settings;
-create policy settings_update on public.event_settings for update using (public.is_organiser()) with check (public.is_organiser());
+create policy settings_update on public.event_settings for update using (public.can_edit()) with check (public.can_edit());
 
 -- investors: self or organisers (self-registration goes through register_investor())
 drop policy if exists investors_select on public.investors;
@@ -497,12 +526,12 @@ create policy investors_select on public.investors for select
   using (id = public.current_investor_id() or public.is_organiser());
 drop policy if exists investors_update on public.investors;
 create policy investors_update on public.investors for update
-  using (id = public.current_investor_id() or public.is_organiser())
-  with check (id = public.current_investor_id() or public.is_organiser());
+  using (id = public.current_investor_id() or public.can_edit())
+  with check (id = public.current_investor_id() or public.can_edit());
 drop policy if exists investors_insert on public.investors;
-create policy investors_insert on public.investors for insert with check (public.is_organiser());
+create policy investors_insert on public.investors for insert with check (public.can_edit());
 drop policy if exists investors_delete on public.investors;
-create policy investors_delete on public.investors for delete using (public.is_organiser());
+create policy investors_delete on public.investors for delete using (public.can_edit());
 
 -- devices: own row only (writes via functions)
 drop policy if exists devices_select on public.investor_devices;
@@ -513,10 +542,13 @@ create policy devices_select on public.investor_devices for select
 drop policy if exists startups_select on public.startups;
 create policy startups_select on public.startups for select using (not hidden or public.is_organiser());
 drop policy if exists startups_write on public.startups;
-create policy startups_write on public.startups for all using (public.is_organiser()) with check (public.is_organiser());
+create policy startups_write on public.startups for all using (public.can_edit()) with check (public.can_edit());
 
 drop policy if exists startup_private_all on public.startup_private;
-create policy startup_private_all on public.startup_private for all using (public.is_organiser()) with check (public.is_organiser());
+drop policy if exists startup_private_select on public.startup_private;
+create policy startup_private_select on public.startup_private for select using (public.is_organiser());
+drop policy if exists startup_private_write on public.startup_private;
+create policy startup_private_write on public.startup_private for all using (public.can_edit()) with check (public.can_edit());
 
 -- requests: investors see and write their own; organisers see all
 drop policy if exists requests_select on public.requests;
@@ -530,11 +562,14 @@ create policy requests_update on public.requests for update
   using (investor_id = public.current_investor_id())
   with check (investor_id = public.current_investor_id());
 drop policy if exists requests_delete on public.requests;
-create policy requests_delete on public.requests for delete using (public.is_organiser());
+create policy requests_delete on public.requests for delete using (public.can_edit());
 
 -- handling: organisers only
 drop policy if exists handling_all on public.request_handling;
-create policy handling_all on public.request_handling for all using (public.is_organiser()) with check (public.is_organiser());
+drop policy if exists handling_select on public.request_handling;
+create policy handling_select on public.request_handling for select using (public.is_organiser());
+drop policy if exists handling_write on public.request_handling;
+create policy handling_write on public.request_handling for all using (public.can_edit()) with check (public.can_edit());
 
 -- notices: the investor reads (and marks read) their own; organisers manage
 drop policy if exists notices_select on public.notices;
@@ -542,11 +577,11 @@ create policy notices_select on public.notices for select
   using (investor_id = public.current_investor_id() or public.is_organiser());
 drop policy if exists notices_update on public.notices;
 create policy notices_update on public.notices for update
-  using (investor_id = public.current_investor_id() or public.is_organiser());
+  using (investor_id = public.current_investor_id() or public.can_edit());
 drop policy if exists notices_write on public.notices;
-create policy notices_write on public.notices for insert with check (public.is_organiser());
+create policy notices_write on public.notices for insert with check (public.can_edit());
 drop policy if exists notices_delete on public.notices;
-create policy notices_delete on public.notices for delete using (public.is_organiser());
+create policy notices_delete on public.notices for delete using (public.can_edit());
 
 -- live board: any registered investor or organiser
 drop policy if exists live_select on public.live_interest;
@@ -571,6 +606,8 @@ grant execute on function public.set_pitching(uuid) to authenticated;
 grant execute on function public.notify_request(uuid) to authenticated;
 grant execute on function public.whoami_organiser() to authenticated;
 grant execute on function public.is_organiser() to anon, authenticated;
+grant execute on function public.can_edit() to anon, authenticated;
+grant execute on function public.organiser_role() to authenticated;
 grant execute on function public.current_investor_id() to anon, authenticated;
 revoke execute on function public.refresh_live_interest(uuid, uuid) from public, anon, authenticated;
 

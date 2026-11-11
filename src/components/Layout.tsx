@@ -1,6 +1,7 @@
 import {
   BarChart3,
   CalendarClock,
+  Eye,
   FlaskConical,
   Inbox,
   LayoutList,
@@ -137,11 +138,13 @@ export function OrganiserShell({
   pendingCount,
   onSignOut,
   who,
+  viewOnly,
 }: {
   children: ReactNode
   pendingCount: number
   onSignOut: () => void
   who: string
+  viewOnly?: boolean
 }) {
   const items: NavItem[] = [
     { to: '/organiser', label: 'Requests', icon: <Inbox className="h-5 w-5" aria-hidden />, badge: pendingCount, end: true },
@@ -159,6 +162,14 @@ export function OrganiserShell({
           <Brand to="/organiser" sub="Organiser dashboard" />
           <TopNav items={items} />
           <div className="flex items-center gap-1">
+            {viewOnly && (
+              <span
+                className="mr-1 inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800 ring-1 ring-inset ring-sky-200"
+                title="Your organiser access is read-only"
+              >
+                <Eye className="h-3 w-3" aria-hidden /> View only
+              </span>
+            )}
             <NavLink
               to="/organiser/settings"
               className={({ isActive }) =>

@@ -18,8 +18,9 @@ import { nowIso, token, uid } from '../utils'
 import { buildSeed } from './seed'
 import type { Audience, PrivateDraft, Store, StartupDraft } from './types'
 
-/** Demo passcode for the organiser dashboard in DEMO mode only. */
+/** Demo passcodes for the organiser dashboard in DEMO mode only. */
 export const DEMO_ORGANISER_PASSCODE = 'catalyst'
+export const DEMO_VIEWER_PASSCODE = 'catalyst-view'
 
 interface DB {
   version: 1
@@ -109,6 +110,12 @@ export class LocalStore implements Store {
 
   private requireOrg() {
     if (!safeGet(ORG_KEY)) throw new Error('Organiser sign-in required.')
+  }
+
+  private requireEdit() {
+    this.requireOrg()
+    const org = JSON.parse(safeGet(ORG_KEY)!) as Organiser
+    if (org.role !== 'editor') throw new Error('Your organiser access is view-only.')
   }
 
   // ---------- shared ----------
@@ -213,19 +220,31 @@ export class LocalStore implements Store {
   // ---------- organiser ----------
   async getOrganiser() {
     const raw = safeGet(ORG_KEY)
-    return raw ? (JSON.parse(raw) as Organiser) : null
+    if (!raw) return null
+    const org = JSON.parse(raw) as Organiser
+    const role: Organiser['role'] = org.role === 'editor' ? 'editor' : 'viewer'
+    return { ...org, role }
   }
 
   async organiserSignIn(email: string, secret: string) {
-    if (secret.trim().toLowerCase() !== DEMO_ORGANISER_PASSCODE)
-      throw new Error(`Incorrect passcode. In demo mode the passcode is “${DEMO_ORGANISER_PASSCODE}”.`)
-    const org: Organiser = { email: email.trim() || 'organiser@demo', name: email.split('@')[0] || 'Organiser' }
+    const code = secret.trim().toLowerCase()
+    if (code !== DEMO_ORGANISER_PASSCODE && code !== DEMO_VIEWER_PASSCODE)
+      throw new Error(`Incorrect passcode. In demo mode use “${DEMO_ORGANISER_PASSCODE}” (editor) or “${DEMO_VIEWER_PASSCODE}” (view-only).`)
+    const org: Organiser = {
+      email: email.trim() || 'organiser@demo',
+      name: email.split('@')[0] || 'Organiser',
+      role: code === DEMO_ORGANISER_PASSCODE ? 'editor' : 'viewer',
+    }
     safeSet(ORG_KEY, JSON.stringify(org))
     return org
   }
 
   async organiserSignOut() {
     safeSet(ORG_KEY, null)
+  }
+
+  async orgChangePassword() {
+    throw new Error('Demo mode uses a shared passcode; passwords apply once Supabase is connected.')
   }
 
   async orgListStartups() {
@@ -239,7 +258,7 @@ export class LocalStore implements Store {
   }
 
   async orgSaveStartup(draft: StartupDraft, priv?: PrivateDraft) {
-    this.requireOrg()
+    this.requireEdit()
     return this.mutate((db) => {
       const t = nowIso()
       let s = draft.id ? db.startups.find((x) => x.id === draft.id) : undefined
@@ -267,7 +286,7 @@ export class LocalStore implements Store {
   }
 
   async orgDeleteStartup(id: string) {
-    this.requireOrg()
+    this.requireEdit()
     this.mutate((db) => {
       db.startups = db.startups.filter((s) => s.id !== id)
       db.privates = db.privates.filter((p) => p.startupId !== id)
@@ -279,7 +298,7 @@ export class LocalStore implements Store {
   }
 
   async orgReorder(ids: string[]) {
-    this.requireOrg()
+    this.requireEdit()
     this.mutate((db) => {
       ids.forEach((id, i) => {
         const s = db.startups.find((x) => x.id === id)
@@ -289,7 +308,7 @@ export class LocalStore implements Store {
   }
 
   async orgSetStatus(id: string, status: StartupStatus) {
-    this.requireOrg()
+    this.requireEdit()
     this.mutate((db) => {
       if (status === 'pitching') db.startups.forEach((s) => s.status === 'pitching' && (s.status = 'done'))
       const s = db.startups.find((x) => x.id === id)
@@ -298,7 +317,7 @@ export class LocalStore implements Store {
   }
 
   async orgSetPitching(id: string | null) {
-    this.requireOrg()
+    this.requireEdit()
     this.mutate((db) => {
       db.startups.forEach((s) => {
         if (s.status === 'pitching' && s.id !== id) s.status = 'done'
@@ -314,14 +333,14 @@ export class LocalStore implements Store {
   }
 
   async orgCreateInvestor(input: InvestorInput) {
-    this.requireOrg()
+    this.requireEdit()
     const inv: Investor = { ...clean(input), id: uid(), inviteToken: token(), createdAt: nowIso(), createdBy: 'organiser' }
     this.mutate((db) => db.investors.push(inv))
     return inv
   }
 
   async orgUpdateInvestor(id: string, input: InvestorInput) {
-    this.requireOrg()
+    this.requireEdit()
     return this.mutate((db) => {
       const inv = db.investors.find((i) => i.id === id)
       if (!inv) throw new Error('Investor not found')
@@ -331,7 +350,7 @@ export class LocalStore implements Store {
   }
 
   async orgDeleteInvestor(id: string) {
-    this.requireOrg()
+    this.requireEdit()
     this.mutate((db) => {
       const reqIds = new Set(db.requests.filter((r) => r.investorId === id).map((r) => r.id))
       db.investors = db.investors.filter((i) => i.id !== id)
@@ -353,7 +372,7 @@ export class LocalStore implements Store {
   }
 
   async orgSaveHandling(requestId: string, patch: Partial<Omit<RequestHandling, 'requestId'>>) {
-    this.requireOrg()
+    this.requireEdit()
     return this.mutate((db) => {
       let h = db.handling.find((x) => x.requestId === requestId)
       if (!h) {
@@ -377,7 +396,7 @@ export class LocalStore implements Store {
   }
 
   async orgNotify(requestId: string) {
-    this.requireOrg()
+    this.requireEdit()
     return this.mutate((db) => {
       const r = db.requests.find((x) => x.id === requestId)
       const h = db.handling.find((x) => x.requestId === requestId)
@@ -408,7 +427,7 @@ export class LocalStore implements Store {
   }
 
   async orgSaveSettings(settings: EventSettings) {
-    this.requireOrg()
+    this.requireEdit()
     return this.mutate((db) => {
       db.settings = { ...settings }
       return db.settings

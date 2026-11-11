@@ -275,8 +275,9 @@ export class SupabaseStore implements Store {
   async getOrganiser(): Promise<Organiser | null> {
     const { data } = await this.org.auth.getSession()
     if (!data.session) return null
-    const who = check(await this.org.rpc('whoami_organiser'))
-    return (who as Organiser | null) ?? null
+    const who = check(await this.org.rpc('whoami_organiser')) as (Omit<Organiser, 'role'> & { role?: string }) | null
+    if (!who) return null
+    return { email: who.email, name: who.name, role: who.role === 'editor' ? 'editor' : 'viewer' }
   }
 
   async organiserSignIn(email: string, password: string) {
@@ -292,6 +293,11 @@ export class SupabaseStore implements Store {
 
   async organiserSignOut() {
     await this.org.auth.signOut()
+  }
+
+  async orgChangePassword(newPassword: string) {
+    const res = await this.org.auth.updateUser({ password: newPassword })
+    if (res.error) throw new Error(friendly(res.error.message))
   }
 
   async orgListStartups() {

@@ -18,6 +18,8 @@ import { useToast } from './Toast'
 interface OrganiserState {
   ready: boolean
   organiser: Organiser | null
+  /** editors can change things; viewers get a read-only dashboard */
+  canEdit: boolean
   settings: EventSettings
   startups: Startup[]
   privates: Map<string, StartupPrivate>
@@ -184,6 +186,7 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       organiser,
+      canEdit: organiser?.role === 'editor',
       settings,
       startups,
       privates,

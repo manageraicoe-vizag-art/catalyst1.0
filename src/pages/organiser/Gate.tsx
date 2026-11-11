@@ -5,15 +5,15 @@ import { Brand, DemoBanner, OrganiserShell } from '../../components/Layout'
 import { Button, Field, Input, Notice, Spinner } from '../../components/ui'
 import { useOrganiser } from '../../context/Organiser'
 import { isDemo } from '../../lib/store'
-import { DEMO_ORGANISER_PASSCODE } from '../../lib/store/local'
+import { DEMO_ORGANISER_PASSCODE, DEMO_VIEWER_PASSCODE } from '../../lib/store/local'
 
 export function OrganiserGate({ children }: { children: ReactNode }) {
-  const { ready, organiser, signOut, requests, handling } = useOrganiser()
+  const { ready, organiser, canEdit, signOut, requests, handling } = useOrganiser()
   if (!ready) return <Spinner />
   if (!organiser) return <OrganiserLogin />
   const pending = requests.filter((r) => r.active && (handling.get(r.id)?.status ?? 'new') === 'new').length
   return (
-    <OrganiserShell pendingCount={pending} onSignOut={signOut} who={organiser.email}>
+    <OrganiserShell pendingCount={pending} onSignOut={signOut} who={organiser.email} viewOnly={!canEdit}>
       {children}
     </OrganiserShell>
   )
@@ -63,7 +63,8 @@ function OrganiserLogin() {
           </form>
           {isDemo ? (
             <p className="mt-4 text-xs text-slate-500">
-              Demo mode: any email, passcode <code className="rounded bg-slate-100 px-1 text-brand-800">{DEMO_ORGANISER_PASSCODE}</code>.
+              Demo mode: any email, passcode <code className="rounded bg-slate-100 px-1 text-brand-800">{DEMO_ORGANISER_PASSCODE}</code> (editor) or{' '}
+              <code className="rounded bg-slate-100 px-1 text-brand-800">{DEMO_VIEWER_PASSCODE}</code> (view-only).
             </p>
           ) : (
             <p className="mt-4 text-xs text-slate-500">

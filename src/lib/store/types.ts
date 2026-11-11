@@ -50,6 +50,8 @@ export interface Store {
   getOrganiser(): Promise<Organiser | null>
   organiserSignIn(email: string, secret: string): Promise<Organiser>
   organiserSignOut(): Promise<void>
+  /** Signed-in organiser changes their own password (live mode). */
+  orgChangePassword(newPassword: string): Promise<void>
   orgListStartups(): Promise<Startup[]>
   orgListStartupPrivate(): Promise<StartupPrivate[]>
   orgSaveStartup(draft: StartupDraft, priv?: PrivateDraft): Promise<Startup>

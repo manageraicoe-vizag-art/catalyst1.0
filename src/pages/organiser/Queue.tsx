@@ -10,7 +10,7 @@ import { ImportDialog } from './ImportDialog'
 import { StartupEditor } from './StartupEditor'
 
 export function QueuePage() {
-  const { startups, setStartups, requests, live, reload } = useOrganiser()
+  const { startups, setStartups, requests, live, reload, canEdit } = useOrganiser()
   const { toast } = useToast()
   const [editing, setEditing] = useState<Startup | null>(null)
   const [adding, setAdding] = useState(false)
@@ -85,8 +85,13 @@ export function QueuePage() {
     <div>
       <PageHeader
         title="Pitch queue"
-        subtitle="Reorder at any time. Investors’ list updates live and their selections are kept."
+        subtitle={
+          canEdit
+            ? 'Reorder at any time. Investors’ list updates live and their selections are kept.'
+            : 'Live pitch order. Your access is view-only.'
+        }
         actions={
+          canEdit && (
           <>
             <Button variant="secondary" size="sm" icon={<Upload className="h-4 w-4" />} onClick={() => setImporting(true)}>
               Import list
@@ -95,6 +100,7 @@ export function QueuePage() {
               Add startup
             </Button>
           </>
+          )
         }
       />
 
@@ -112,6 +118,7 @@ export function QueuePage() {
             {nextUp && <p className="truncate text-sm text-slate-500">Next: #{nextUp.position} {nextUp.name}</p>}
           </div>
         </div>
+        {canEdit && (
         <div className="flex gap-2">
           {pitching && (
             <Button variant="secondary" icon={<Square className="h-4 w-4" />} disabled={busy} onClick={() => setPitching(null)}>
@@ -122,13 +129,14 @@ export function QueuePage() {
             {pitching ? 'Next startup' : 'Start first pitch'}
           </Button>
         </div>
+        )}
       </div>
 
       {startups.length === 0 ? (
         <EmptyState
           title="No startups yet"
           body="Import the shared startup list (paste from Google Sheets) or add startups one by one."
-          action={<Button onClick={() => setImporting(true)}>Import list</Button>}
+          action={canEdit ? <Button onClick={() => setImporting(true)}>Import list</Button> : undefined}
         />
       ) : (
         <ol className="space-y-2" aria-label="Pitch order">
@@ -137,12 +145,14 @@ export function QueuePage() {
             return (
               <li
                 key={s.id}
-                draggable
+                draggable={canEdit}
                 onDragStart={(e) => {
+                  if (!canEdit) return
                   setDragId(s.id)
                   e.dataTransfer.effectAllowed = 'move'
                 }}
                 onDragOver={(e) => {
+                  if (!canEdit) return
                   e.preventDefault()
                   onDragOver(s.id)
                 }}
@@ -157,7 +167,7 @@ export function QueuePage() {
                   s.hidden && 'opacity-60',
                 )}
               >
-                <GripVertical className="hidden h-5 w-5 shrink-0 cursor-grab text-slate-400 md:block" aria-hidden />
+                {canEdit && <GripVertical className="hidden h-5 w-5 shrink-0 cursor-grab text-slate-400 md:block" aria-hidden />}
                 <span
                   className={cn(
                     'tabular flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold',
@@ -182,6 +192,7 @@ export function QueuePage() {
                     {st && (st.reqs > 0 || st.funds > 0) && ` · ${st.funds} funds · ${st.reqs} requests`}
                   </p>
                 </div>
+                {canEdit && (
                 <div className="flex shrink-0 items-center gap-0.5">
                   {s.status !== 'pitching' && !s.hidden && (
                     <Button size="sm" variant="ghost" className="hidden sm:inline-flex" disabled={busy} onClick={() => setPitching(s.id)}>
@@ -198,6 +209,7 @@ export function QueuePage() {
                     <Pencil className="h-4 w-4" />
                   </button>
                 </div>
+                )}
               </li>
             )
           })}

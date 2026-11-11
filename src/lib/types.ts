@@ -124,9 +124,13 @@ export interface LiveInterest {
   updatedAt: string
 }
 
+export type OrganiserRole = 'editor' | 'viewer'
+
 export interface Organiser {
   email: string
   name: string
+  /** editor: full control · viewer: read-only overview */
+  role: OrganiserRole
 }
 
 export type Topic =

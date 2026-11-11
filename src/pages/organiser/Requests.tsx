@@ -22,7 +22,7 @@ const STATUS_BADGE: Record<RowStatus, { tone: Parameters<typeof Badge>[0]['tone'
 }
 
 export function RequestsPage() {
-  const { requests, handling, fresh, startups, settings, reload } = useOrganiser()
+  const { requests, handling, fresh, startups, settings, reload, canEdit } = useOrganiser()
   const { investorById, startupById } = useLookups()
   const { toast } = useToast()
   const [view, setView] = useState<View>('action')
@@ -246,12 +246,12 @@ export function RequestsPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 md:justify-end">
-                    {st === 'new' && (
+                    {canEdit && st === 'new' && (
                       <Button size="sm" onClick={() => setEditing(r)}>
                         {r.type === 'deck' ? 'Share deck…' : 'Approve…'}
                       </Button>
                     )}
-                    {st === 'approved' && (
+                    {canEdit && st === 'approved' && (
                       <>
                         <Button size="sm" icon={<Send className="h-3.5 w-3.5" />} loading={busyId === r.id} onClick={() => notify(r)}>
                           Notify investor
@@ -262,22 +262,24 @@ export function RequestsPage() {
                     {st === 'notified' && (
                       <>
                         <span className="mr-1 text-xs text-slate-500">Sent {clockTime(h?.notifiedAt)}</span>
-                        {links?.email && (
+                        {canEdit && links?.email && (
                           <a href={links.email} title="Also send by email" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
                             <Mail className="h-4 w-4" />
                           </a>
                         )}
-                        {links?.whatsapp && (
+                        {canEdit && links?.whatsapp && (
                           <a href={links.whatsapp} target="_blank" rel="noreferrer" title="Also send on WhatsApp" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
                             <MessageCircle className="h-4 w-4" />
                           </a>
                         )}
-                        <Button size="sm" variant="ghost" icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEditing(r)}>
-                          Edit
-                        </Button>
+                        {canEdit && (
+                          <Button size="sm" variant="ghost" icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEditing(r)}>
+                            Edit
+                          </Button>
+                        )}
                       </>
                     )}
-                    {(st === 'new' || st === 'approved') && (
+                    {canEdit && (st === 'new' || st === 'approved') && (
                       <button
                         onClick={() => setArchived(r, true)}
                         title="Archive (hide from Needs action; the investor is not told)"
@@ -287,7 +289,7 @@ export function RequestsPage() {
                         <Archive className="h-4 w-4" />
                       </button>
                     )}
-                    {st === 'archived' && (
+                    {canEdit && st === 'archived' && (
                       <Button size="sm" variant="ghost" icon={<ArchiveRestore className="h-3.5 w-3.5" />} onClick={() => setArchived(r, false)}>
                         Restore
                       </Button>
