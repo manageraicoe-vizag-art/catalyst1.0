@@ -104,8 +104,8 @@ export function PosterHero({ settings, children }: { settings: EventSettings; ch
   const [day, mon] = dayMonth(settings.date)
   return (
     <div className="circuit-bg relative overflow-hidden bg-black">
-      <Sparkle className="absolute left-[6%] top-[18%] h-10 w-10 sm:h-16 sm:w-16" twinkle />
-      <Sparkle className="absolute left-[11%] top-[34%] h-3 w-3 sm:h-4 sm:w-4" />
+      <Sparkle className="absolute left-[7%] top-[5%] h-10 w-10 sm:left-[6%] sm:top-[18%] sm:h-16 sm:w-16" twinkle />
+      <Sparkle className="absolute left-[20%] top-[12%] h-3 w-3 sm:left-[11%] sm:top-[34%] sm:h-4 sm:w-4" />
       <Sparkle className="absolute right-[8%] top-[9%] h-5 w-5 sm:h-7 sm:w-7" twinkle />
       <Sparkle className="absolute right-[5%] top-[46%] hidden h-6 w-6 sm:block" />
       <Ribbon className="bottom-0 left-0 h-24 w-44 sm:h-40 sm:w-72" />
@@ -117,10 +117,15 @@ export function PosterHero({ settings, children }: { settings: EventSettings; ch
           Visakhapatnam
         </p>
 
-        <h1 className="mt-6 font-pixel text-3xl font-bold uppercase tracking-[0.12em] text-brand-800 sm:text-5xl">
-          {settings.eventName}
+        <h1 className="mt-6">
+          <img
+            src="./brand/catalyst-logo.png"
+            alt={`${settings.eventName}: ${settings.tagline}`}
+            width={606}
+            height={96}
+            className="mx-auto w-[min(100%,606px)]"
+          />
         </h1>
-        <p className="mt-1 font-serif text-base text-paper sm:text-xl">{settings.tagline}</p>
 
         <div className="mt-6 flex items-center justify-center gap-3 sm:gap-5">
           <span className="font-pixel text-[2.6rem] font-bold uppercase leading-none text-paper sm:text-7xl">
@@ -155,7 +160,6 @@ export function PosterHero({ settings, children }: { settings: EventSettings; ch
 
 export function JoinPage() {
   const { ready, me, settings, register } = useInvestor()
-  const nav = useNavigate()
   const loc = useLocation()
   const from = (loc.state as { from?: string } | null)?.from ?? '/startups'
 
@@ -168,7 +172,7 @@ export function JoinPage() {
       <PosterHero settings={settings} />
 
       <div className="relative mx-auto grid max-w-5xl gap-6 px-4 pb-10 pt-2 lg:grid-cols-[1fr_340px]">
-        <div className="rounded-2xl border border-brand-300 bg-white p-5 shadow-[0_0_0_1px_rgba(246,168,200,.08),0_20px_60px_-20px_rgba(246,168,200,.25)] sm:p-7">
+        <div className="rounded-2xl border border-brand-300 bg-white p-5 shadow-[0_0_0_1px_rgba(255,172,183,.08),0_20px_60px_-20px_rgba(255,172,183,.25)] sm:p-7">
           <p className="eyebrow text-brand-700">Investor check-in</p>
           <h2 className="mt-1 text-lg font-bold text-slate-950">Enter your details once</h2>
           <p className="mb-5 mt-1 text-sm text-slate-600">
@@ -178,8 +182,9 @@ export function JoinPage() {
             submitLabel="Continue to the startups"
             fundSuggestions={settings.participatingFunds}
             onSubmit={async (v) => {
+              // Once `me` is set this page renders <Navigate to={from}>; no second redirect here,
+              // or a quick tap elsewhere would be bounced back after the reload finishes.
               await register(v)
-              nav(from, { replace: true })
             }}
           />
           <p className="mt-4 flex items-start gap-2 text-xs text-slate-500">

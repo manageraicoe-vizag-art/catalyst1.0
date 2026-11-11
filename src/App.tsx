@@ -65,7 +65,7 @@ function ProjectorBoard() {
           </Link>
           <Sparkle className="h-6 w-6" twinkle />
         </div>
-        <p className="font-pixel text-xl font-bold uppercase tracking-[0.12em] text-brand-800 sm:text-3xl">{settings.eventName}</p>
+        <img src="./brand/catalyst-logo.png" alt={`${settings.eventName}: ${settings.tagline}`} width={606} height={96} className="w-[min(100%,480px)]" />
         <h1 className="mb-6 mt-1 font-pixel text-3xl font-bold uppercase text-paper sm:text-5xl">Live interest</h1>
         <LiveBoard startups={startups.filter((s) => !s.hidden)} live={live} />
       </div>

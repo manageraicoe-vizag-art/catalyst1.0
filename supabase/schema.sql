@@ -207,6 +207,10 @@ language plpgsql security definer
 set search_path = public
 as $$
 begin
+  -- Serialise per (startup, investor). Without this, two toggles withdrawn at the same moment
+  -- (parallel requests) each see the *other* as still active and the fund stays on the board.
+  -- After the lock, the next statement takes a fresh snapshot (READ COMMITTED) and sees both.
+  perform pg_advisory_xact_lock(hashtextextended(p_startup::text || ':' || p_investor::text, 0));
   if exists (
     select 1 from public.requests
     where startup_id = p_startup and investor_id = p_investor and active
@@ -555,6 +559,10 @@ create policy live_select on public.live_interest for select
 grant usage on schema public to anon, authenticated;
 grant select on public.event_settings, public.startups to anon;
 grant select, insert, update, delete on all tables in schema public to authenticated;
+-- Logged-out visitors (role anon) only ever need the public startup list and event settings.
+-- (Investors' anonymous sign-ins use the `authenticated` role, so they are unaffected.)
+revoke all on public.organisers, public.investors, public.investor_devices, public.startup_private,
+  public.requests, public.request_handling, public.notices, public.live_interest from anon;
 grant execute on function public.register_investor(text, text, text, text, text) to authenticated;
 grant execute on function public.claim_invite(text) to authenticated;
 grant execute on function public.forget_device() to authenticated;
@@ -583,3 +591,17 @@ begin
   end loop;
 end;
 $$;
+
+-- =====================================================================
+-- Self-heal: make the live board exactly match active requests (safe to re-run)
+-- =====================================================================
+delete from public.live_interest l
+where not exists (
+  select 1 from public.requests r
+  where r.startup_id = l.startup_id and r.investor_id = l.investor_id and r.active
+);
+insert into public.live_interest (startup_id, investor_id, fund)
+select distinct r.startup_id, r.investor_id, i.fund
+from public.requests r join public.investors i on i.id = r.investor_id
+where r.active
+on conflict (startup_id, investor_id) do nothing;

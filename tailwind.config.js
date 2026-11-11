@@ -37,18 +37,19 @@ export default {
         950: '#ffffff', // primary ink
       },
       brand: {
-        50: '#1f0f17',
-        100: '#2e1522',
-        200: '#4a2236',
-        300: '#6e3150',
-        400: '#a34a76',
-        500: '#d06a9a',
-        600: '#e486b0',
-        700: '#f29cc0',
-        800: '#f6a8c8', // poster pink
-        900: '#fac0d8',
-        950: '#fde0ec',
+        50: '#1f0f12',
+        100: '#2e151a',
+        200: '#4a2229',
+        300: '#6e3540',
+        400: '#a85566',
+        500: '#d27585',
+        600: '#e8909e',
+        700: '#f7a2ae',
+        800: '#ffacb7', // logo pink (Catalyst 1.0 wordmark)
+        900: '#ffc4cc',
+        950: '#ffe0e4',
       },
+      cream: '#f5f1e1', // logo tagline cream
       go: '#34d27b', // poster green (C1/26) — "now pitching", live
       flame: '#ff7f3f', // poster orange
       amber: invert(colors.amber),
@@ -66,7 +67,7 @@ export default {
       },
       keyframes: {
         flash: {
-          '0%': { backgroundColor: 'rgba(246,168,200,0.45)' },
+          '0%': { backgroundColor: 'rgba(255,172,183,0.45)' },
           '100%': { backgroundColor: 'transparent' },
         },
         rise: {

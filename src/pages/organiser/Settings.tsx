@@ -78,7 +78,7 @@ export function SettingsPage() {
           <p className="mb-3 text-xs text-slate-500">One per line. Organisers pick from this list when approving meetings.</p>
           <Textarea value={roomsText} onChange={(e) => setRoomsText(e.target.value)} rows={7} aria-label="Meeting rooms" />
           <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" checked={s.allowCustomRoom} onChange={(e) => setS((x) => ({ ...x, allowCustomRoom: e.target.checked }))} className="h-4 w-4 accent-[#f6a8c8]" />
+            <input type="checkbox" checked={s.allowCustomRoom} onChange={(e) => setS((x) => ({ ...x, allowCustomRoom: e.target.checked }))} className="h-4 w-4 accent-[#ffacb7]" />
             Also allow typing a room that is not on the list
           </label>
         </div>

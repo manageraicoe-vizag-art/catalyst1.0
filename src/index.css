@@ -19,7 +19,7 @@
     --tw-ring-offset-color: #050505;
   }
   ::selection {
-    background: rgba(246, 168, 200, 0.35);
+    background: rgba(255, 172, 183, 0.35);
   }
   /* iOS zooms into inputs under 16px; keep them readable without zoom */
   @media (max-width: 640px) {

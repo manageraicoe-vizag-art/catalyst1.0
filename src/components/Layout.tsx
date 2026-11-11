@@ -20,10 +20,9 @@ import { cn } from '../lib/utils'
 export function Brand({ to = '/', sub }: { to?: string; sub?: string }) {
   return (
     <Link to={to} className="flex min-w-0 items-center gap-2.5">
-      <img src="./favicon.svg" alt="" className="h-8 w-8 shrink-0 rounded-lg ring-1 ring-slate-300" />
       <div className="min-w-0 leading-tight">
-        <p className="truncate font-pixel text-[15px] font-bold uppercase tracking-wide text-brand-800">Catalyst 1.0</p>
-        <p className="truncate font-display text-[11px] uppercase tracking-[0.18em] text-slate-500">{sub ?? 'Demo Day · RTIH Vizag'}</p>
+        <img src="./brand/catalyst-wordmark.png" alt="Catalyst 1.0" width={606} height={46} className="h-[15px] w-auto sm:h-[17px]" />
+        <p className="mt-1 truncate font-display text-[11px] uppercase tracking-[0.18em] text-slate-500">{sub ?? 'Demo Day · RTIH Vizag'}</p>
       </div>
     </Link>
   )
