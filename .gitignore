@@ -4,3 +4,6 @@ dist
 .env.local
 .DS_Store
 *.log
+
+# Founder material (deck links, draft one-pagers) - never commit
+private/

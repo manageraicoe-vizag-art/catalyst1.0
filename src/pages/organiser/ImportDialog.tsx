@@ -28,9 +28,10 @@ const ALIASES: Record<string, string[]> = {
   contactName: ['contact_name', 'contact_person'],
   contactEmail: ['contact_email', 'email', 'founder_email'],
   contactPhone: ['contact_phone', 'phone', 'founder_phone', 'mobile'],
+  notes: ['notes', 'organiser_notes', 'review_notes', 'internal_notes'],
 }
 
-const TEMPLATE_COLS = ['order', 'name', 'sector', 'stage', 'description', 'problem', 'solution', 'market', 'traction', 'business_model', 'team', 'ask', 'founders', 'city', 'website', 'one_pager_url', 'deck_url', 'contact_name', 'contact_email', 'contact_phone']
+const TEMPLATE_COLS = ['order', 'name', 'sector', 'stage', 'description', 'problem', 'solution', 'market', 'traction', 'business_model', 'team', 'ask', 'founders', 'city', 'website', 'one_pager_url', 'deck_url', 'contact_name', 'contact_email', 'contact_phone', 'notes']
 
 function pick(row: Record<string, string>, key: string): string {
   for (const a of ALIASES[key] ?? [key]) if (row[a] !== undefined && row[a] !== '') return row[a]!
@@ -92,7 +93,7 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
           contactName: pick(row, 'contactName'),
           contactEmail: pick(row, 'contactEmail'),
           contactPhone: pick(row, 'contactPhone'),
-          notes: '',
+          notes: pick(row, 'notes'),
         }
         await store.orgSaveStartup(draft, priv)
       }
