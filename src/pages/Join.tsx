@@ -1,7 +1,7 @@
 import { ArrowRight, Lock, MousePointerClick, Radio, ShieldCheck } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { IdeasToImpact, Lighthouse, Ribbon, Sparkle } from '../components/Decor'
+import { Association, IdeasToImpact, Lighthouse, Ribbon, RtihMain, Sparkle } from '../components/Decor'
 import { DemoBanner } from '../components/Layout'
 import { Button, Field, Input, Notice, Spinner } from '../components/ui'
 import { useInvestor } from '../context/Investor'
@@ -112,10 +112,7 @@ export function PosterHero({ settings, children }: { settings: EventSettings; ch
       <Lighthouse className="pointer-events-none absolute -bottom-1 right-0 w-48 opacity-25 sm:w-96" />
 
       <div className="relative mx-auto max-w-3xl px-4 pb-28 pt-8 text-center sm:pb-32 sm:pt-12">
-        <p className="font-serif text-2xl font-medium tracking-wide text-paper sm:text-3xl">RTIH</p>
-        <p className="-mt-0.5 font-display text-[10px] font-semibold uppercase tracking-[0.3em] text-paper sm:text-xs">
-          Visakhapatnam
-        </p>
+        <RtihMain className="mx-auto w-[170px] sm:w-[220px]" />
 
         <h1 className="mt-6">
           <img
@@ -218,6 +215,7 @@ export function JoinPage() {
           </p>
         </aside>
       </div>
+      <Association className="px-4 pb-8 pt-6" />
       <IdeasToImpact className="pb-10" />
     </div>
   )

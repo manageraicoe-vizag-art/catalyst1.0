@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { HashRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { Sparkle } from './components/Decor'
+import { Association, IdeasToImpact, RtihMain, Sparkle } from './components/Decor'
 import { InvestorShell } from './components/Layout'
 import { Spinner } from './components/ui'
 import { InvestorProvider, useInvestor } from './context/Investor'
@@ -65,9 +65,12 @@ function ProjectorBoard() {
           </Link>
           <Sparkle className="h-6 w-6" twinkle />
         </div>
+        <RtihMain className="mb-4 w-[160px]" />
         <img src="./brand/catalyst-logo.png" alt={`${settings.eventName}: ${settings.tagline}`} width={606} height={96} className="w-[min(100%,480px)]" />
         <h1 className="mb-6 mt-1 font-pixel text-3xl font-bold uppercase text-paper sm:text-5xl">Live interest</h1>
         <LiveBoard startups={startups.filter((s) => !s.hidden)} live={live} />
+        <Association className="mt-10" />
+        <IdeasToImpact className="mt-6" />
       </div>
     </div>
   )

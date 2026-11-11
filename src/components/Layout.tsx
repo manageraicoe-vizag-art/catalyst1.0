@@ -14,7 +14,7 @@ import {
 import type { ReactNode } from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { isDemo } from '../lib/store'
-import { IdeasToImpact } from './Decor'
+import { SiteFooter } from './Decor'
 import { cn } from '../lib/utils'
 
 export function Brand({ to = '/', sub }: { to?: string; sub?: string }) {
@@ -22,7 +22,7 @@ export function Brand({ to = '/', sub }: { to?: string; sub?: string }) {
     <Link to={to} className="flex min-w-0 items-center gap-2.5">
       <div className="min-w-0 leading-tight">
         <img src="./brand/catalyst-wordmark.png" alt="Catalyst 1.0" width={606} height={46} className="h-[15px] w-auto sm:h-[17px]" />
-        <p className="mt-1 truncate font-display text-[11px] uppercase tracking-[0.18em] text-slate-500">{sub ?? 'Demo Day · RTIH Vizag'}</p>
+        <p className="mt-1 truncate font-display text-[11px] uppercase tracking-[0.18em] text-slate-500">{sub ?? 'Demo Day · RTIH Visakhapatnam'}</p>
       </div>
     </Link>
   )
@@ -125,8 +125,8 @@ export function InvestorShell({ children, unread, name }: { children: ReactNode;
           {name && <span className="hidden max-w-[10rem] truncate text-sm text-slate-500 lg:block">{name}</span>}
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 pb-6 pt-4 md:pt-6">{children}</main>
-      <IdeasToImpact className="pb-28 pt-6 md:pb-10" />
+      <main className="mx-auto max-w-5xl px-4 pb-10 pt-4 md:pt-6">{children}</main>
+      <SiteFooter className="pb-28 md:pb-10" />
       <BottomNav items={items} />
     </div>
   )
@@ -180,8 +180,8 @@ export function OrganiserShell({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 pb-6 pt-4 md:pt-6">{children}</main>
-      <IdeasToImpact className="pb-28 pt-6 md:pb-10" />
+      <main className="mx-auto max-w-7xl px-4 pb-10 pt-4 md:pt-6">{children}</main>
+      <SiteFooter className="pb-28 md:pb-10" />
       <BottomNav items={mobileItems} />
     </div>
   )

@@ -49,3 +49,51 @@ export function IdeasToImpact({ className }: { className?: string }) {
     </p>
   )
 }
+
+/** Host hub (main). */
+export function RtihMain({ className }: { className?: string }) {
+  return (
+    <img
+      src="./brand/rtih-visakhapatnam.png"
+      alt="RTIH Visakhapatnam"
+      width={340}
+      height={77}
+      className={cn('h-auto', className)}
+    />
+  )
+}
+
+/** "in association with" partner hubs, styled like the poster. */
+export function Association({ className, size = 'lg' }: { className?: string; size?: 'lg' | 'sm' }) {
+  const logo = size === 'lg' ? 'w-[132px] sm:w-[170px]' : 'w-[92px] sm:w-[108px]'
+  return (
+    <div className={cn('flex flex-col items-center', className)}>
+      <p
+        className={cn(
+          'font-display text-brand-800 underline decoration-brand-800/70 underline-offset-4',
+          size === 'lg' ? 'text-base sm:text-lg' : 'text-xs',
+        )}
+      >
+        in association with
+      </p>
+      <div className={cn('flex items-center justify-center', size === 'lg' ? 'mt-4 gap-6 sm:gap-12' : 'mt-2.5 gap-5')}>
+        <img src="./brand/rtih-anantapuramu.png" alt="RTIH Anantapuramu" width={311} height={70} className={cn('h-auto', logo)} />
+        <img src="./brand/rtih-tirupati.png" alt="RTIH Tirupati" width={311} height={70} className={cn('h-auto', logo)} />
+      </div>
+    </div>
+  )
+}
+
+/** Footer used on every app page: host hub, partner hubs, tagline. */
+export function SiteFooter({ className }: { className?: string }) {
+  return (
+    <footer className={cn('mx-auto flex max-w-5xl flex-col items-center gap-5 border-t border-slate-200 px-4 pt-8', className)}>
+      <div className="flex flex-col items-center gap-1.5">
+        <span className="font-display text-[11px] uppercase tracking-[0.25em] text-slate-500">Hosted by</span>
+        <RtihMain className="w-[124px] sm:w-[140px]" />
+      </div>
+      <Association size="sm" />
+      <IdeasToImpact className="pt-1" />
+    </footer>
+  )
+}

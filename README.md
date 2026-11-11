@@ -1,6 +1,7 @@
 # Catalyst 1.0 · Demo Day: investor interest app
 
-Mobile-first web app for **RTIH Visakhapatnam's Catalyst Demo Day (16 Nov)**: 21 startups pitching to 20+ VC funds.
+Mobile-first web app for **Catalyst 1.0 Demo Day (16 Nov)**, hosted by **RTIH Visakhapatnam** in association with
+**RTIH Anantapuramu** and **RTIH Tirupati**: 21 startups pitching to 20+ VC funds.
 It works on phones, tablets and laptops, and is hosted free on GitHub Pages.
 
 - **Investors** open one event link, enter name / fund / contact once, then tap **Request pitch deck**, **Request a
@@ -108,5 +109,6 @@ Stack: React 18, TypeScript, Vite, Tailwind CSS, Supabase (Postgres, anonymous +
 Routing uses hash URLs (`/#/startups`), so GitHub Pages needs no server configuration.
 
 Theme: black background, poster pink, Silkscreen pixel type, sparkles, circuit texture and the Vizag lighthouse,
-matching the Catalyst 1.0 poster. The colour scales in `tailwind.config.js` are inverted for the dark theme (see the
+matching the Catalyst 1.0 poster. Logos live in `public/brand/` (the RTIH logos were lifted from the poster at about
+340 px wide; drop in higher-resolution transparent PNGs with the same file names to sharpen them). The colour scales in `tailwind.config.js` are inverted for the dark theme (see the
 note at the top of that file).
