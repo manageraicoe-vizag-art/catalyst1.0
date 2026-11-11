@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-slate-50 font-sans text-slate-900 antialiased;
+    background-color: #050505;
+  }
+  /* Focus-ring offsets sit on the dark page, not white */
+  *,
+  ::before,
+  ::after {
+    --tw-ring-offset-color: #050505;
+  }
+  ::selection {
+    background: rgba(246, 168, 200, 0.35);
+  }
+  /* iOS zooms into inputs under 16px; keep them readable without zoom */
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+  input[type='time']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator,
+  input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
+
+@layer components {
+  /* Faint circuit-board texture from the poster */
+  .circuit-bg {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220' fill='none' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1.2'%3E%3Cpath d='M0 40h60l20 20h60M140 60l20-20h60M30 0v20l20 20M190 220v-40l-20-20h-50M0 150h40l20 20v50M220 110h-50l-20 20H90l-20-20H40'/%3E%3Ccircle cx='140' cy='60' r='3'/%3E%3Ccircle cx='50' cy='40' r='3'/%3E%3Ccircle cx='120' cy='160' r='3'/%3E%3Ccircle cx='60' cy='170' r='3'/%3E%3Ccircle cx='170' cy='130' r='3'/%3E%3C/svg%3E");
+  }
+  .pixel-title {
+    @apply font-pixel font-bold uppercase leading-none tracking-wide;
+  }
+  .eyebrow {
+    @apply font-display text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500;
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
