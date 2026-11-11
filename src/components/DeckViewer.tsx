@@ -1,9 +1,9 @@
 import { ExternalLink, FileText, Loader2, Lock, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { store } from '../lib/store'
 import type { Startup } from '../lib/types'
-import { deckEmbed } from '../lib/utils'
+import { cn, deckEmbed } from '../lib/utils'
 import { Button, Notice } from './ui'
 
 /** Full-screen pitch deck viewer with an "Open link" fallback. */
@@ -11,6 +11,9 @@ export function DeckViewer({ startup, open, onClose }: { startup: Startup; open:
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [frameLoaded, setFrameLoaded] = useState(false)
+  // keep the latest onClose without re-running the scroll-lock effect on every parent render
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
@@ -25,7 +28,7 @@ export function DeckViewer({ startup, open, onClose }: { startup: Startup; open:
 
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCloseRef.current()
     document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -33,7 +36,7 @@ export function DeckViewer({ startup, open, onClose }: { startup: Startup; open:
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
   const deck = url ? deckEmbed(url) : null
@@ -89,7 +92,8 @@ export function DeckViewer({ startup, open, onClose }: { startup: Startup; open:
             <iframe
               src={deck.embed}
               title={`${startup.name} pitch deck`}
-              className="relative h-full w-full border-0 bg-white"
+              // absolutely pinned: a percentage-height iframe inside a flex item can stop repainting
+              className={cn('absolute inset-0 h-full w-full border-0', frameLoaded ? 'bg-white' : 'bg-transparent')}
               allow="fullscreen"
               allowFullScreen
               referrerPolicy="no-referrer"
