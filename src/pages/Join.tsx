@@ -110,7 +110,7 @@ export function PosterHero({ settings, children }: { settings: EventSettings; ch
       <Lighthouse className="pointer-events-none absolute -bottom-1 right-0 w-48 opacity-25 sm:w-96" />
 
       <div className="relative mx-auto max-w-3xl px-4 pb-28 pt-8 text-center sm:pb-32 sm:pt-12">
-        <RtihMain className="mx-auto w-[170px] sm:w-[220px]" />
+        <RtihMain className="mx-auto w-[210px] sm:w-[280px]" />
 
         <h1 className="mt-6">
           <img
@@ -168,7 +168,10 @@ export function JoinPage() {
 
       <div className="relative mx-auto grid max-w-5xl gap-6 px-4 pb-10 pt-2 lg:grid-cols-[1fr_340px]">
         <div className="rounded-2xl border border-brand-300 bg-white p-5 shadow-[0_0_0_1px_rgba(255,172,183,.08),0_20px_60px_-20px_rgba(255,172,183,.25)] sm:p-7">
-          <p className="eyebrow text-brand-700">Investor check-in</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="eyebrow text-brand-700">Investor check-in</p>
+            <RtihMain className="w-[96px] shrink-0 opacity-90 sm:w-[110px]" />
+          </div>
           <h2 className="mt-1 text-lg font-bold text-slate-950">Enter your details once</h2>
           <p className="mb-5 mt-1 text-sm text-slate-600">
             Then respond to any startup with a single tap. No separate QR code per startup, nothing to re-enter.

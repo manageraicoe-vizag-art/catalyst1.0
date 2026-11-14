@@ -18,12 +18,23 @@ import { isDemo } from '../lib/store'
 import { SiteFooter } from './Decor'
 import { cn } from '../lib/utils'
 
-export function Brand({ to = '/', sub }: { to?: string; sub?: string }) {
+/** Header brand: RTIH Visakhapatnam (host) first, then the Catalyst 1.0 wordmark. */
+export function Brand({ to = '/', sub, compact }: { to?: string; sub?: string; compact?: boolean }) {
   return (
-    <Link to={to} className="flex min-w-0 items-center gap-2.5">
-      <div className="min-w-0 leading-tight">
-        <img src="./brand/catalyst-wordmark.png" alt="Catalyst 1.0" width={606} height={46} className="h-[15px] w-auto sm:h-[17px]" />
-        <p className="mt-1 truncate font-display text-[11px] uppercase tracking-[0.18em] text-slate-500">{sub ?? 'Demo Day · RTIH Visakhapatnam'}</p>
+    <Link to={to} className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="RTIH Visakhapatnam · Catalyst 1.0">
+      <img
+        src="./brand/rtih-visakhapatnam.png"
+        alt="RTIH Visakhapatnam"
+        width={340}
+        height={77}
+        className="h-7 w-auto shrink-0 sm:h-8"
+      />
+      <span className={cn('h-8 w-px shrink-0 bg-slate-300', compact && 'hidden sm:block')} aria-hidden />
+      <div className={cn('min-w-0 leading-tight', compact && 'hidden sm:block')}>
+        <img src="./brand/catalyst-wordmark.png" alt="Catalyst 1.0" width={606} height={46} className="h-[13px] w-auto sm:h-[16px]" />
+        <p className="mt-1 truncate font-display text-[10px] uppercase tracking-[0.18em] text-slate-500 sm:text-[11px]">
+          {sub ?? 'Demo Day · 16 Nov'}
+        </p>
       </div>
     </Link>
   )
@@ -159,7 +170,7 @@ export function OrganiserShell({
       <DemoBanner />
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-black/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4">
-          <Brand to="/organiser" sub="Organiser dashboard" />
+          <Brand to="/organiser" sub="Organiser dashboard" compact />
           <TopNav items={items} />
           <div className="flex items-center gap-1">
             {viewOnly && (
