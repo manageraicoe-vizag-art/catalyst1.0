@@ -73,7 +73,7 @@ export const breakTimes = (b: (typeof EVENT_SCHEDULE.breaks)[number]) => ({ star
 
 // ---------- what the stage shows right now ----------
 
-export type StagePhase = 'idle' | 'break' | 'pitch' | 'qa' | 'interest'
+export type StagePhase = 'idle' | 'break' | 'pitch' | 'qa' | 'interest' | 'results'
 
 export interface StageView {
   phase: StagePhase
@@ -84,8 +84,8 @@ export interface StageView {
 }
 
 /**
- * The shared stage row → what to show now. A running stage goes pitch → Q&A → investor interest
- * by itself (from the server's start time); the interest screen then stays until an editor starts the next pitch.
+ * The shared stage row → what to show now. A running stage goes pitch → Q&A → investor interest (countdown)
+ * → VC-interest results by itself (from the server's start time); the results stay until an editor starts the next pitch.
  */
 export function stageView(snap: StageSnapshot | null, now: number): StageView {
   if (!snap) return { phase: 'idle', startupId: null, endsAt: null, deckPage: 1 }
@@ -97,7 +97,9 @@ export function stageView(snap: StageSnapshot | null, now: number): StageView {
   const qaEnd = pitchEnd + s.qaSecs * 1000
   if (now < pitchEnd) return { ...base, phase: 'pitch', endsAt: pitchEnd }
   if (now < qaEnd) return { ...base, phase: 'qa', endsAt: qaEnd }
-  return { ...base, phase: 'interest', endsAt: qaEnd + PHASE_MINUTES.interest * 60_000 }
+  const interestEnd = qaEnd + PHASE_MINUTES.interest * 60_000
+  if (now < interestEnd) return { ...base, phase: 'interest', endsAt: interestEnd }
+  return { ...base, phase: 'results', endsAt: null }
 }
 
 /** Ticks a few times a second so phases and timers move on by themselves. */

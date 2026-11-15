@@ -39,7 +39,7 @@ export function StartupsPage() {
 
   const pitching = startups.find((s) => s.status === 'pitching')
   // the projector's "investors, your turn" window for the startup that just pitched (stays until the next pitch)
-  const askFor = view.phase === 'interest' ? startups.find((s) => s.id === view.startupId) : undefined
+  const askFor = view.phase === 'interest' || view.phase === 'results' ? startups.find((s) => s.id === view.startupId) : undefined
 
   return (
     <div>

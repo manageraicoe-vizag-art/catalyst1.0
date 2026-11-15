@@ -80,7 +80,9 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
             changed.forEach((r) => n.add(r.id))
             return n
           })
-          if (added) toast({ kind: 'info', title: `${added} new request${added > 1 ? 's' : ''}`, ms: 3000 })
+          // never pop up on the projector (stage screen), only on the dashboard
+          const onStage = window.location.hash.includes('/organiser/stage')
+          if (added && !onStage) toast({ kind: 'info', title: `${added} new request${added > 1 ? 's' : ''}`, ms: 3000 })
         }
       }
       seen.current = next

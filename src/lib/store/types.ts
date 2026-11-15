@@ -89,6 +89,8 @@ export interface Store {
   orgSetStage(mode: StageMode, startupId: string | null, pitchSecs: number, qaSecs: number): Promise<void>
   /** Adds time to whichever timer is running (pitch or Q&A). */
   orgStageAddTime(secs: number): Promise<void>
+  /** Skips the interest countdown: the projector shows the VC-interest results until the next pitch. */
+  orgStageShowResults(startupId: string, interestSecs: number): Promise<void>
   /** Current slide of the deck on the projector (any organiser, so the projector's clicker can sync it). */
   orgStageSlide(page: number): Promise<void>
   /** Deck PDFs for the projector: startup id → version (changes when the file is replaced). */

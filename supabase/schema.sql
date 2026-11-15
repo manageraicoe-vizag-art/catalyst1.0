@@ -847,6 +847,26 @@ grant execute on function public.stage_set(text, uuid, int, int) to authenticate
 grant execute on function public.stage_add_time(int) to authenticated;
 grant execute on function public.stage_slide(int) to authenticated;
 
+-- Skip the investor-interest countdown and show the results screen now (it stays until the next pitch).
+-- p_back_secs = the app's interest-window length, so the stage reads as "interest over".
+create or replace function public.stage_show_results(p_startup uuid, p_back_secs int)
+returns void
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  if not public.can_edit() then
+    raise exception 'Organiser editors only';
+  end if;
+  update public.stage
+     set mode = 'running', startup_id = p_startup, pitch_secs = 0, qa_secs = 0,
+         started_at = now() - make_interval(secs => greatest(p_back_secs, 0) + 1), updated_at = now()
+   where id = 1;
+end;
+$$;
+revoke execute on function public.stage_show_results(uuid, int) from public, anon;
+grant execute on function public.stage_show_results(uuid, int) to authenticated;
+
 do $$
 begin
   alter publication supabase_realtime add table public.stage;

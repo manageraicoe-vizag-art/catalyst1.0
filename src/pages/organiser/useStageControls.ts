@@ -64,11 +64,14 @@ export function useStageControls() {
       'Could not change the stage',
     )
 
+  /** Skip the investors' countdown and show the VC-interest results now (they stay until the next pitch). */
+  const showResults = () =>
+    pitching && run(() => store.orgStageShowResults(pitching.id, PHASE_MINUTES.interest * 60), 'Could not change the stage')
   const showSchedule = () => run(() => store.orgSetStage('idle', null, 0, 0), 'Could not change the stage')
   const toggleBreak = () => run(() => store.orgSetStage(view.phase === 'break' ? 'idle' : 'break', null, 0, 0), 'Could not change the stage')
   const addMinute = () => run(() => store.orgStageAddTime(60), 'Could not add time')
   const slide = (delta: 1 | -1) =>
     void store.orgStageSlide(Math.max(1, (stage?.stage.deckPage ?? 1) + delta)).then(() => reload('stage'), () => {})
 
-  return { stage, view, pitching, nextUp, busy, canEdit, startPitch, endPitch, setPhase, showSchedule, toggleBreak, addMinute, slide }
+  return { stage, view, pitching, nextUp, busy, canEdit, startPitch, endPitch, setPhase, showResults, showSchedule, toggleBreak, addMinute, slide }
 }

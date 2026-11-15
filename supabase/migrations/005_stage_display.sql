@@ -1,7 +1,7 @@
 -- Catalyst 1.0 · update 005: the projector stage screen.
 --   1. A 'display' organiser role for the projector login (admin2): read-only, opens straight to the stage screen.
 --   2. One shared stage row that editors (admin1) drive and every screen follows: who is on,
---      the pitch → Q&A → investor-interest timers (server time) and the deck's current slide.
+--      the pitch → Q&A → investor-interest → VC-interest results timeline (server time) and the deck's current slide.
 --   3. A private 'decks' storage bucket: PDFs an editor uploads are shown on the projector.
 -- Safe to run more than once. Run it in Supabase → SQL Editor.
 --
@@ -134,6 +134,26 @@ grant execute on function public.stage_start_pitch(uuid, int, int) to authentica
 grant execute on function public.stage_set(text, uuid, int, int) to authenticated;
 grant execute on function public.stage_add_time(int) to authenticated;
 grant execute on function public.stage_slide(int) to authenticated;
+
+-- Skip the investor-interest countdown and show the results screen now (it stays until the next pitch).
+-- p_back_secs = the app's interest-window length, so the stage reads as "interest over".
+create or replace function public.stage_show_results(p_startup uuid, p_back_secs int)
+returns void
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  if not public.can_edit() then
+    raise exception 'Organiser editors only';
+  end if;
+  update public.stage
+     set mode = 'running', startup_id = p_startup, pitch_secs = 0, qa_secs = 0,
+         started_at = now() - make_interval(secs => greatest(p_back_secs, 0) + 1), updated_at = now()
+   where id = 1;
+end;
+$$;
+revoke execute on function public.stage_show_results(uuid, int) from public, anon;
+grant execute on function public.stage_show_results(uuid, int) to authenticated;
 
 do $$
 begin

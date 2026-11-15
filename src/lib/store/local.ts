@@ -562,6 +562,22 @@ export class LocalStore implements Store {
     })
   }
 
+  async orgStageShowResults(startupId: string, interestSecs: number) {
+    this.requireEdit()
+    this.mutate((db) => {
+      const prev = db.stage ?? IDLE_STAGE()
+      db.stage = {
+        ...prev,
+        startupId,
+        mode: 'running',
+        pitchSecs: 0,
+        qaSecs: 0,
+        startedAt: new Date(Date.now() - (interestSecs + 1) * 1000).toISOString(),
+        updatedAt: nowIso(),
+      }
+    })
+  }
+
   async orgStageSlide(page: number) {
     this.requireOrg()
     this.mutate((db) => {

@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CalendarClock, Check, ChevronLeft, ChevronRight, Coffee, EyeOff, GripVertical, ListOrdered, MessagesSquare, Mic, Monitor, Pencil, Plus, Presentation, RotateCcw, SkipForward, Square, Undo2, Upload, Users } from 'lucide-react'
+import { ArrowDown, ArrowUp, BarChart3, CalendarClock, Check, ChevronLeft, ChevronRight, Coffee, EyeOff, GripVertical, ListOrdered, MessagesSquare, Mic, Monitor, Pencil, Plus, Presentation, RotateCcw, SkipForward, Square, Undo2, Upload, Users } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DeckPresenter } from '../../components/DeckPresenter'
 import { Badge, Button, EmptyState, Modal, PageHeader } from '../../components/ui'
@@ -425,18 +425,23 @@ function PhaseBar({ sc, hasDeck }: { sc: ReturnType<typeof useStageControls>; ha
   const items = [
     { key: 'pitch', label: `Pitch · ${PHASE_MINUTES.pitch} min`, icon: Mic },
     { key: 'qa', label: `Q&A · ${PHASE_MINUTES.qa} min`, icon: MessagesSquare },
-    { key: 'interest', label: 'Investor interest', icon: Users },
+    { key: 'interest', label: 'Investors respond', icon: Users },
   ] as const
   const timed = view.phase === 'pitch' || view.phase === 'qa'
   return (
     <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 sm:col-span-2">
       <span className="eyebrow mr-1">Projector</span>
       {sc.pitching ? (
-        items.map(({ key, label, icon: Icon }) => (
-          <Button key={key} size="sm" variant={view.phase === key ? 'primary' : 'secondary'} icon={<Icon className="h-4 w-4" />} disabled={!sc.canEdit || sc.busy} onClick={() => void sc.setPhase(key)}>
-            {label}
+        <>
+          {items.map(({ key, label, icon: Icon }) => (
+            <Button key={key} size="sm" variant={view.phase === key ? 'primary' : 'secondary'} icon={<Icon className="h-4 w-4" />} disabled={!sc.canEdit || sc.busy} onClick={() => void sc.setPhase(key)}>
+              {label}
+            </Button>
+          ))}
+          <Button size="sm" variant={view.phase === 'results' ? 'primary' : 'secondary'} icon={<BarChart3 className="h-4 w-4" />} disabled={!sc.canEdit || sc.busy} onClick={() => void sc.showResults()}>
+            Show VC interest
           </Button>
-        ))
+        </>
       ) : (
         <>
           <Button size="sm" variant={view.phase === 'idle' ? 'primary' : 'secondary'} icon={<ListOrdered className="h-4 w-4" />} disabled={!sc.canEdit || sc.busy} onClick={() => void sc.showSchedule()}>
@@ -447,12 +452,13 @@ function PhaseBar({ sc, hasDeck }: { sc: ReturnType<typeof useStageControls>; ha
           </Button>
         </>
       )}
+      {view.phase === 'results' && <span className="ml-1 text-sm text-slate-600">VC interest on screen · start the next pitch when ready</span>}
       {left !== null && (
         <span
           className={cn('tabular ml-1 font-pixel text-lg font-bold', view.phase === 'interest' ? 'text-brand-800' : left < 0 ? 'text-red-500' : left <= 60 ? 'text-amber-500' : 'text-go')}
           role="timer"
         >
-          {view.phase === 'interest' ? (left > 0 ? fmtCountdown(left) : 'waiting for next pitch') : fmtCountdown(left)}
+          {fmtCountdown(left)}
         </span>
       )}
       {timed && sc.canEdit && (

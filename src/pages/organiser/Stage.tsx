@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   CalendarPlus,
   Check,
   ChevronRight,
@@ -24,7 +25,7 @@ import { PdfSlides } from '../../components/PdfSlides'
 import { QrCode } from '../../components/Qr'
 import { Spinner } from '../../components/ui'
 import { useOrganiser } from '../../context/Organiser'
-import { ACTION_SHORT, ROUTING_NOTE } from '../../lib/constants'
+import { ACTION_SHORT, LIVE_DISCLAIMER, ROUTING_NOTE } from '../../lib/constants'
 import { fetchDeck } from '../../lib/decks'
 import { closePdf, openPdf, type PDFDocumentProxy } from '../../lib/pdf'
 import {
@@ -40,7 +41,7 @@ import {
   useCountdown,
 } from '../../lib/stage'
 import { store } from '../../lib/store'
-import type { Startup } from '../../lib/types'
+import type { InterestRequest, LiveInterest, Startup } from '../../lib/types'
 import { cn, eventLink } from '../../lib/utils'
 import { useStageControls } from './useStageControls'
 
@@ -57,11 +58,23 @@ export function StagePage() {
   return <Stage />
 }
 
-const PHASE_LABEL: Record<'pitch' | 'qa' | 'interest', string> = { pitch: 'Pitch', qa: 'Q&A', interest: 'Investor interest' }
+const PHASE_LABEL: Record<'pitch' | 'qa' | 'interest', string> = { pitch: 'Pitch', qa: 'Q&A', interest: 'Investors respond' }
+
+/** Interest in one startup: request counts per option and the funds behind any request (as on the Live board). */
+function interestIn(startupId: string, requests: InterestRequest[], live: LiveInterest[]) {
+  const active = requests.filter((r) => r.active && r.startupId === startupId)
+  const funds = new Map<string, string>()
+  for (const l of live) if (l.startupId === startupId) funds.set(l.fund.trim().toLowerCase(), l.fund.trim())
+  return {
+    today: active.filter((r) => r.type === 'meet_today').length,
+    later: active.filter((r) => r.type === 'meet_later').length,
+    funds: [...funds.values()].sort((a, b) => a.localeCompare(b)),
+  }
+}
 
 function Stage() {
-  const { startups, settings, deckFiles, organiser, signOut, stageError } = useOrganiser()
-  const { view, pitching, nextUp, busy, canEdit, startPitch, endPitch, setPhase, showSchedule, toggleBreak, addMinute } = useStageControls()
+  const { startups, settings, deckFiles, organiser, signOut, stageError, requests, live: liveInterest } = useOrganiser()
+  const { view, pitching, nextUp, busy, canEdit, startPitch, endPitch, setPhase, showResults, showSchedule, toggleBreak, addMinute } = useStageControls()
   const isDisplay = organiser?.role === 'display'
   const rootRef = useRef<HTMLDivElement>(null)
   const slots = slotIndexById(startups)
@@ -181,7 +194,10 @@ function Stage() {
   // ---------- which screen ----------
   let screen: ReactNode
   if (view.phase === 'break') screen = <BreakScreen nextUp={nextUp} slots={slots} />
-  else if (view.phase === 'interest' && onStage) screen = <InterestScreen startup={onStage} endsAt={view.endsAt} nextUp={nextUp} slots={slots} />
+  else if (view.phase === 'interest' && onStage)
+    screen = <InterestScreen startup={onStage} endsAt={view.endsAt} nextUp={nextUp} slots={slots} responded={interestIn(onStage.id, requests, liveInterest).funds.length} />
+  else if (view.phase === 'results' && onStage)
+    screen = <ResultsScreen startup={onStage} {...interestIn(onStage.id, requests, liveInterest)} nextUp={nextUp} slots={slots} />
   else if (live && onStage)
     screen = deckOn ? (
       <>
@@ -217,6 +233,9 @@ function Stage() {
                     {p !== 'interest' && ` ${PHASE_MINUTES[p]}:00`}
                   </Ctl>
                 ))}
+                <Ctl icon={BarChart3} active={view.phase === 'results'} disabled={busy} onClick={() => void showResults()}>
+                  Show VC interest
+                </Ctl>
                 {live && (
                   <Ctl icon={Plus} disabled={busy} onClick={() => void addMinute()}>
                     1 min
@@ -459,7 +478,7 @@ function NowScreen({ startup, phase, endsAt, nextUp, slots }: { startup: Startup
   )
 }
 
-function InterestScreen({ startup, endsAt, nextUp, slots }: { startup: Startup; endsAt: number | null; nextUp: Startup | undefined; slots: Map<string, number> }) {
+function InterestScreen({ startup, endsAt, nextUp, slots, responded }: { startup: Startup; endsAt: number | null; nextUp: Startup | undefined; slots: Map<string, number>; responded: number }) {
   const qrPx = Math.round(window.innerWidth * 0.075)
   const pill = (Icon: LucideIcon, label: string, sub: string) => (
     <div className="flex items-center gap-[1vw] rounded-[1.1vw] border-2 border-brand-800 bg-brand-800/10 px-[1.5vw] py-[1.6vh]">
@@ -498,6 +517,9 @@ function InterestScreen({ startup, endsAt, nextUp, slots }: { startup: Startup; 
         </div>
         <div className="flex flex-col items-center gap-[3.5vh]">
           <BigTimer endsAt={endsAt} totalSecs={PHASE_MINUTES.interest * 60} size="21vw" done="Thank you" />
+          <p className="text-[1.5vw] text-slate-700">
+            <span className="tabular font-pixel text-[2vw] font-bold text-brand-800">{responded}</span> fund{responded === 1 ? '' : 's'} interested so far
+          </p>
           <div className="flex items-center gap-[1vw]">
             <QrCode value={eventLink()} size={qrPx} />
             <p className="text-[1.15vw] leading-snug text-slate-700">
@@ -509,6 +531,65 @@ function InterestScreen({ startup, endsAt, nextUp, slots }: { startup: Startup; 
         </div>
       </div>
       <UpNext nextUp={nextUp} slots={slots} />
+    </div>
+  )
+}
+
+function ResultsScreen({
+  startup,
+  today,
+  later,
+  funds,
+  nextUp,
+  slots,
+}: {
+  startup: Startup
+  today: number
+  later: number
+  funds: string[]
+  nextUp: Startup | undefined
+  slots: Map<string, number>
+}) {
+  const i = slots.get(startup.id)
+  const stat = (Icon: LucideIcon, label: string, n: number) => (
+    <div className="flex items-center gap-[1.6vw] rounded-[1.2vw] border-2 border-brand-800 bg-brand-800/10 px-[2vw] py-[2.4vh]">
+      <Icon className="h-[3.4vw] w-[3.4vw] shrink-0 text-brand-800" aria-hidden />
+      <div>
+        <p className="tabular font-pixel text-[4.6vw] font-bold leading-none text-paper">{n}</p>
+        <p className="mt-[1vh] text-[1.6vw] font-semibold text-slate-950">{label}</p>
+        <p className="text-[1vw] text-slate-500">{n === 1 ? 'request' : 'requests'}</p>
+      </div>
+    </div>
+  )
+  return (
+    <div className="flex h-full flex-col px-[4.5vw] pb-[4.5vh] pt-[3.5vh]">
+      <Header />
+      <div className="flex min-h-0 flex-1 flex-col justify-center">
+        <p className="eyebrow text-[1.3vw] text-brand-800">VC interest{i !== undefined && ` · Slot ${i + 1}`}</p>
+        <h1 className="mt-[1.5vh] text-[4vw] font-bold leading-[1.08] text-slate-950">{startup.name}</h1>
+        <div className="mt-[4vh] grid grid-cols-2 gap-[2vw]">
+          {stat(Handshake, ACTION_SHORT.meet_today, today)}
+          {stat(CalendarPlus, ACTION_SHORT.meet_later, later)}
+        </div>
+        {funds.length > 0 ? (
+          <div className="mt-[4vh]">
+            <p className="eyebrow text-[1vw]">
+              {funds.length} fund{funds.length === 1 ? '' : 's'} interested
+            </p>
+            <div className="mt-[1.6vh] flex flex-wrap gap-[0.8vw]">
+              {funds.map((f) => (
+                <span key={f} className="rounded-full border border-slate-300 bg-white/60 px-[1.3vw] py-[0.9vh] text-[1.5vw] font-semibold text-slate-950">
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-[4vh] text-[1.7vw] text-slate-500">Investors can still respond in the Catalyst app throughout the day.</p>
+        )}
+      </div>
+      <p className="text-[0.9vw] text-slate-500">{LIVE_DISCLAIMER}</p>
+      <UpNext nextUp={nextUp} slots={slots} className="mt-[1.5vh]" />
     </div>
   )
 }
