@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" />
+<title>Catalyst 1.0 · Dinner night sticker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+<!--
+  Dinner-night sticker: business card size, 3.5 x 2 in (88.9 x 50.8 mm), square corners, RTIH + Catalyst logos and Name / Fund-Company write-in lines.
+  Default view: ten per A4 sheet. Open with #single for one sticker on its own (used for the PNG).
+  Print at 100% (no "fit to page") on A4 matte sticker paper, cut along the dashed lines.
+-->
+<style>
+  @page { size: A4; margin: 0 }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  html, body { margin: 0; background: #fff }
+  .sheet { position: relative; width: 210mm; height: 297mm; overflow: hidden; background: #fff; font-family: 'Josefin Sans', system-ui, sans-serif }
+  .top { position: absolute; left: 13mm; right: 13mm; top: 6mm; display: flex; justify-content: space-between;
+    font-size: 2.7mm; color: #71717a; letter-spacing: .12em; text-transform: uppercase }
+  .top b { color: #18181b; font-weight: 700 }
+  .foot { position: absolute; left: 12mm; right: 12mm; bottom: 4.5mm; font-size: 2.4mm; color: #a1a1aa; text-align: center; letter-spacing: .04em }
+  .grid { position: absolute; left: 13.1mm; top: 14mm; display: grid; grid-template-columns: repeat(2, 88.9mm); gap: 4.5mm 6mm }
+  .grid .tag { outline: .3mm dashed #a1a1aa; outline-offset: 1.6mm }
+
+  /* the sticker */
+  .tag { width: 88.9mm; height: 50.8mm; background: #000; display: flex; flex-direction: column; padding: 0 4mm 4mm;
+    font-family: 'Josefin Sans', system-ui, sans-serif }
+  .logos { height: 14mm; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 1mm }
+  .logos .rtih { width: 27mm }
+  .logos .catalyst { width: 40mm }
+  .panel { flex: 1; background: #fff; display: flex; flex-direction: column; padding: 0 4mm 1.4mm }
+  .panel div { flex: 1; display: flex; flex-direction: column; justify-content: flex-end }
+  .panel div::before { content: ''; border-bottom: .35mm solid #c4c4cc }
+  .panel span { font-size: 2.1mm; letter-spacing: .24em; text-transform: uppercase; color: #a1a1aa; font-weight: 600; text-align: right; margin-top: .8mm }
+  .panel div:first-child { flex: 1.1 }
+
+  body.single .sheet { display: none } body.single .one { display: flex }
+  .one { display: none }
+</style></head>
+<body>
+<section class="sheet">
+  <div class="top"><span><b>Catalyst 1.0</b> &nbsp;Dinner night sticker</span><span>10 per sheet · business card 3.5 × 2 in</span></div>
+  <div class="grid"></div>
+  <div class="foot">Print at 100% (no scaling) on A4 matte sticker paper · cut along the dashed lines · write with a ballpoint or fine marker</div>
+</section>
+<div class="tag one"></div>
+
+<script>
+  const art = `<div class="logos"><img class="rtih" src="../public/brand/rtih-visakhapatnam.png" alt="RTIH Visakhapatnam" />
+    <img class="catalyst" src="../public/brand/catalyst-wordmark.png" alt="Catalyst 1.0" /></div>
+    <div class="panel"><div><span>Name</span></div><div><span>Fund / Company</span></div></div>`
+  document.querySelector('.grid').innerHTML = `<div class="tag">${art}</div>`.repeat(10)
+  document.querySelector('.one').innerHTML = art
+  if (location.hash === '#single') document.body.classList.add('single')
+</script>
+</body></html>

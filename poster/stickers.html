@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" />
+<title>Catalyst 1.0 Demo Day · Name tags</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet" />
+<!--
+  Round name-tag stickers, 80 mm, six per A4 sheet, one sheet per role:
+    #inv  Investor (pink)   #stp  Startup (green)   #del  Delegate (orange)   #org  Organiser (yellow)
+  Print at 100% (no "fit to page") on A4 matte sticker paper, then cut along the dashed circles.
+  The dashed line sits 1.6 mm outside each tag so a slightly off cut never clips the artwork.
+-->
+<style>
+  @page { size: A4; margin: 0 }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  html, body { margin: 0; background: #fff }
+  .sheet { position: relative; width: 210mm; height: 297mm; overflow: hidden; background: #fff; break-after: page;
+    font-family: 'Josefin Sans', system-ui, sans-serif }
+  .inv { --a: #ffacb7 } .stp { --a: #34d27b } .del { --a: #ff7f3f } .org { --a: #ffd23f }
+
+  .top { position: absolute; left: 20mm; right: 20mm; top: 8mm; display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 2.7mm; color: #71717a; letter-spacing: .12em; text-transform: uppercase }
+  .top b { color: #18181b; font-weight: 700 } .top i { font-style: normal; display: inline-block; width: 2.4mm; height: 2.4mm; border-radius: 50%; background: var(--a); margin-right: 1.6mm; vertical-align: -.2mm }
+  .foot { position: absolute; left: 12mm; right: 12mm; bottom: 7mm; font-size: 2.4mm; color: #a1a1aa; text-align: center; letter-spacing: .04em }
+
+  .grid { position: absolute; left: 20mm; top: 20mm; display: grid; grid-template-columns: repeat(2, 80mm); gap: 9mm 10mm }
+
+  /* one round tag: colour band, two write-in lines, event strip */
+  .tag { width: 80mm; height: 80mm; border-radius: 50%; overflow: hidden; background: #fff; display: flex; flex-direction: column;
+    outline: .3mm dashed #a1a1aa; outline-offset: 1.6mm; position: relative }
+  .tag::after { content: ''; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 .9mm #0b0b0c }
+  .band { height: 27mm; flex: none; background: var(--a); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 3mm }
+  .band img { width: 24mm; filter: brightness(0) }
+  .role { font-family: Silkscreen, monospace; font-weight: 700; text-transform: uppercase; font-size: 7mm; line-height: .9; margin-top: 2.6mm; color: #0b0b0c; white-space: nowrap }
+  .lines { flex: 1; display: flex; flex-direction: column; padding: 0 10mm 2.6mm }
+  .lines div { flex: 1; display: flex; flex-direction: column; justify-content: flex-end }
+  .lines div::before { content: ''; border-bottom: .35mm solid #c4c4cc }
+  .lines span { font-size: 2.2mm; letter-spacing: .24em; text-transform: uppercase; color: #a1a1aa; font-weight: 600; text-align: center; margin-top: .9mm }
+  .lines div:first-child { flex: 1.1 }
+  .strip { height: 15mm; flex: none; background: #0b0b0c; display: flex; flex-direction: column; align-items: center; padding-top: 3mm }
+  .strip img { width: 27mm }
+  .strip small { font-size: 1.9mm; letter-spacing: .24em; text-transform: uppercase; color: #a1a1aa; margin-top: 1.3mm }
+</style></head>
+<body>
+
+<section class="sheet inv" id="inv" data-role="Investor" data-org="Fund / Company"></section>
+<section class="sheet stp" id="stp" data-role="Startup" data-org="Company"></section>
+<section class="sheet del" id="del" data-role="Delegate" data-org="Company"></section>
+<section class="sheet org" id="org" data-role="Organiser" data-org="Company"></section>
+
+<script>
+  // Build six identical tags on each role sheet.
+  const tag = (role, org) => `
+    <div class="tag">
+      <div class="band"><img src="../public/brand/rtih-visakhapatnam.png" alt="RTIH Visakhapatnam" /><div class="role">${role}</div></div>
+      <div class="lines"><div><span>Name</span></div><div><span>${org}</span></div></div>
+      <div class="strip"><img src="../public/brand/catalyst-wordmark.png" alt="Catalyst 1.0" /><small>Demo Day · 16 Nov 2026</small></div>
+    </div>`
+  document.querySelectorAll('.sheet').forEach(s => {
+    const { role, org } = s.dataset
+    s.innerHTML = `
+      <div class="top"><span><i></i><b>Catalyst 1.0 · Demo Day</b> &nbsp;Name tags · ${role}</span><span>6 per sheet · 80 mm</span></div>
+      <div class="grid">${tag(role, org).repeat(6)}</div>
+      <div class="foot">Print at 100% (no scaling) on A4 matte sticker paper · cut along the dashed circles · write with a ballpoint or fine marker</div>`
+  })
+  // Open with #inv, #stp, #del or #org to show a single sheet (used for the PNG previews).
+  if (location.hash) document.querySelectorAll('.sheet').forEach(s => { if ('#' + s.id !== location.hash) s.style.display = 'none' })
+</script>
+</body></html>
