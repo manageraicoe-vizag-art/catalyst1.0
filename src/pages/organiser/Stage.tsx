@@ -285,7 +285,30 @@ function Stage() {
         <TimerChip phase={view.phase as 'pitch' | 'qa'} endsAt={view.endsAt} />
       </>
     ) : (
-      <NowScreen startup={onStage} phase={view.phase as 'pitch' | 'qa'} endsAt={view.endsAt} nextUp={nextUp} slots={slots} />
+      <NowScreen
+        startup={onStage}
+        phase={view.phase as 'pitch' | 'qa'}
+        endsAt={view.endsAt}
+        nextUp={nextUp}
+        slots={slots}
+        missingDeck={
+          checked === deckId && !doc && !frameSrc && controls ? (
+            <div className="mt-[4vh] inline-flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/60 bg-amber-950/60 px-4 py-3 text-base text-amber-100">
+              <span>
+                No pitch deck for {onStage.name} yet.{' '}
+                {canEdit ? 'Load the PDF here (it is uploaded for every screen),' : 'Load the PDF here,'} or upload it in Pitch queue → Upload deck PDFs.
+              </span>
+              <button
+                type="button"
+                onClick={(e) => (e.currentTarget.blur(), fileRef.current?.click())}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-paper px-3 py-1.5 text-sm font-semibold text-black hover:bg-slate-800"
+              >
+                <FileUp className="h-4 w-4" aria-hidden /> Load PDF
+              </button>
+            </div>
+          ) : undefined
+        }
+      />
     )
   else screen = <ScheduleScreen startups={startups} nextUp={nextUp} slots={slots} eventTitle={settings.eventTitle} />
 
@@ -544,20 +567,44 @@ function BigTimer({ endsAt, totalSecs, size, done }: { endsAt: number | null; to
   )
 }
 
+/** Timer over the deck: a bar at the bottom centre plus a thin progress line along the bottom edge. */
 function TimerChip({ phase, endsAt }: { phase: 'pitch' | 'qa'; endsAt: number | null }) {
   const left = useCountdown(endsAt)
   if (left === null) return null
+  const total = PHASE_MINUTES[phase] * 60
+  const used = Math.min(1, Math.max(0, 1 - left / total))
   return (
-    <div className="absolute bottom-[2vh] right-[1.5vw] z-10 flex items-center gap-[0.6vw] rounded-full bg-black/75 px-[1vw] py-[0.6vh]">
-      <span className="eyebrow text-[0.8vw]">{PHASE_LABEL[phase]}</span>
-      <span className="tabular font-pixel text-[1.3vw] font-bold" style={{ color: ringColor(left) }}>
-        {fmtCountdown(left)}
-      </span>
-    </div>
+    <>
+      <div className="pointer-events-none absolute bottom-[1.6vh] left-1/2 z-10 flex -translate-x-1/2 items-center gap-[1vw] rounded-full border border-white/15 bg-black/80 px-[1.6vw] py-[0.9vh] shadow-lg">
+        <span className="eyebrow text-[1vw]">{phase === 'pitch' ? 'Pitch' : 'Q&A'}</span>
+        <span className="tabular text-[2.2vw] font-bold leading-none" style={{ color: ringColor(left) }} role="timer">
+          {fmtCountdown(left)}
+        </span>
+        {left < 0 && <span className="eyebrow text-[0.9vw] text-red-500">over time</span>}
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[0.6vh] bg-white/10" aria-hidden>
+        <div className="h-full transition-[width] duration-300" style={{ width: `${used * 100}%`, background: ringColor(left) }} />
+      </div>
+    </>
   )
 }
 
-function NowScreen({ startup, phase, endsAt, nextUp, slots }: { startup: Startup; phase: 'pitch' | 'qa'; endsAt: number | null; nextUp: Startup | undefined; slots: Map<string, number> }) {
+function NowScreen({
+  startup,
+  phase,
+  endsAt,
+  nextUp,
+  slots,
+  missingDeck,
+}: {
+  startup: Startup
+  phase: 'pitch' | 'qa'
+  endsAt: number | null
+  nextUp: Startup | undefined
+  slots: Map<string, number>
+  /** shown to the operator (while the mouse moves) when this startup has no deck to put on screen */
+  missingDeck?: ReactNode
+}) {
   const i = slots.get(startup.id)
   return (
     <div className="flex h-full flex-col px-[4.5vw] pb-[5vh] pt-[3.5vh]">
@@ -570,6 +617,7 @@ function NowScreen({ startup, phase, endsAt, nextUp, slots }: { startup: Startup
           </p>
           <h1 className="mt-[2.5vh] text-[5vw] font-bold leading-[1.05] text-slate-950">{startup.name}</h1>
           {startup.sector && <p className="mt-[2vh] text-[2vw] text-slate-500">{startup.sector}</p>}
+          {missingDeck}
         </div>
         <BigTimer endsAt={endsAt} totalSecs={PHASE_MINUTES[phase] * 60} size="26vw" />
       </div>
