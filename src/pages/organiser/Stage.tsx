@@ -618,7 +618,7 @@ function InterestScreen({ startup, endsAt, nextUp, slots, responded }: { startup
         <div className="flex flex-col items-center gap-[3.5vh]">
           <BigTimer endsAt={endsAt} totalSecs={PHASE_MINUTES.interest * 60} size="21vw" done="Thank you" />
           <p className="text-[1.5vw] text-slate-700">
-            <span className="tabular font-pixel text-[2vw] font-bold text-brand-800">{responded}</span> fund{responded === 1 ? '' : 's'} interested so far
+            <span className="tabular text-[2.2vw] font-bold text-brand-800">{responded}</span> fund{responded === 1 ? '' : 's'} interested so far
           </p>
           <div className="flex items-center gap-[1vw]">
             <QrCode value={eventLink()} size={qrPx} />
@@ -655,7 +655,7 @@ function ResultsScreen({
     <div className="flex items-center gap-[1.6vw] rounded-[1.2vw] border-2 border-brand-800 bg-brand-800/10 px-[2vw] py-[2.4vh]">
       <Icon className="h-[3.4vw] w-[3.4vw] shrink-0 text-brand-800" aria-hidden />
       <div>
-        <p className="tabular font-pixel text-[4.6vw] font-bold leading-none text-paper">{n}</p>
+        <p className="tabular text-[5vw] font-bold leading-none text-paper">{n}</p>
         <p className="mt-[1vh] text-[1.6vw] font-semibold text-slate-950">{label}</p>
         <p className="text-[1vw] text-slate-500">{n === 1 ? 'request' : 'requests'}</p>
       </div>

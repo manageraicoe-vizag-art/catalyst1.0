@@ -159,6 +159,8 @@ function friendly(msg: string): string {
   if (/rate limit/i.test(msg))
     return 'Too many sign-ins from this network right now. Please try again in a minute (organisers: raise the anonymous sign-in rate limit in Supabase → Authentication → Rate Limits).'
   if (/invalid login credentials/i.test(msg)) return 'Email or password is incorrect.'
+  if (/archive_interest|requests_archive/i.test(msg))
+    return 'Resetting interest needs database update 006: run supabase/migrations/006_interest_reset.sql in Supabase → SQL Editor.'
   if (/stage_(?:get|start_pitch|set|add_time|slide|show_results)|relation "public\.stage"|bucket not found/i.test(msg))
     return 'The stage screen needs database update 005: run supabase/migrations/005_stage_display.sql in Supabase → SQL Editor.'
   if (/row-level security|permission denied/i.test(msg)) return 'You do not have access to do that.'
@@ -386,6 +388,10 @@ export class SupabaseStore implements Store {
 
   async orgSetPitching(id: string | null) {
     check(await this.org.rpc('set_pitching', { p_id: id }))
+  }
+
+  async orgArchiveInterest() {
+    return Number(check(await this.org.rpc('archive_interest')) ?? 0)
   }
 
   async orgListInvestors() {

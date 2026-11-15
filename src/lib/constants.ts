@@ -15,9 +15,9 @@ export const ACTION_SHORT: Record<ActionType, string> = {
 export const ACTION_HELP: Record<ActionType, string> = {
   deck: 'The RTIH team reviews deck requests and shares the deck with you. Nothing is sent to founders automatically.',
   meet_today:
-    'An expression of interest, not a confirmed booking. If approved, the RTIH team will send you the room and time here.',
+    'An expression of interest, not a confirmed booking. If approved, the RTIH team will send you the room and time here. Choosing this replaces a “Schedule a call later” request.',
   meet_later:
-    'An expression of interest in a call after Demo Day. The RTIH team will be in touch to arrange it.',
+    'An expression of interest in a call after Demo Day. The RTIH team will be in touch to arrange it. Choosing this replaces a “Meet today” request.',
 }
 
 export const LIVE_DISCLAIMER =

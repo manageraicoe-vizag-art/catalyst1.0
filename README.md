@@ -86,8 +86,10 @@ An editor (admin1) runs it from the **Pitch queue** page on any device:
 
 **One-time setup (live mode):**
 
-1. Supabase → *SQL Editor*: run [`supabase/migrations/005_stage_display.sql`](supabase/migrations/005_stage_display.sql)
-   (safe to re-run; it is also part of `schema.sql`).
+1. Supabase → *SQL Editor*: run [`supabase/migrations/005_stage_display.sql`](supabase/migrations/005_stage_display.sql), then
+   [`006_interest_reset.sql`](supabase/migrations/006_interest_reset.sql) (both safe to re-run; both are part of `schema.sql`).
+   006 lets **Restart queue** archive all investor interest (kept in `requests_archive`) so every screen starts fresh, and
+   makes **Meet today** / **Schedule a call later** either-or for each startup.
 2. *Authentication → Users → Add user*: the projector's email + password, tick **Auto Confirm User**. Then in the SQL Editor:
    ```sql
    insert into public.organisers (email, name, role) values ('display@rtih.in', 'Projector', 'display')

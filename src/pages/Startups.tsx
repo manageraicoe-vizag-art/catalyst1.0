@@ -77,7 +77,7 @@ export function StartupsPage() {
             <Hand className="h-4 w-4" aria-hidden /> Investors · your turn
           </p>
           <p className="mt-1.5 text-lg font-bold text-slate-950">Interested in {askFor.name}?</p>
-          <p className="mb-3 text-sm text-slate-600">Tap to let the RTIH team know. You can change it any time.</p>
+          <p className="mb-3 text-sm text-slate-600">Pick one to let the RTIH team know. You can change it any time.</p>
           <ActionToggles startup={askFor} types={['meet_today', 'meet_later']} />
         </section>
       )}

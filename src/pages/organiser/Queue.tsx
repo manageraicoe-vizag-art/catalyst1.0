@@ -18,7 +18,7 @@ import {
   useCountdown,
 } from '../../lib/stage'
 import { store } from '../../lib/store'
-import type { Startup, StartupStatus } from '../../lib/types'
+import type { Startup, StartupStatus, Topic } from '../../lib/types'
 import { cn } from '../../lib/utils'
 import { DeckUploadDialog } from './DeckUploadDialog'
 import { ImportDialog } from './ImportDialog'
@@ -35,6 +35,7 @@ export function QueuePage() {
   const [busy, setBusy] = useState(false)
   const [presenting, setPresenting] = useState<Startup | null>(null)
   const [confirmRestart, setConfirmRestart] = useState(false)
+  const [clearInterest, setClearInterest] = useState(true)
   const [deckBatch, setDeckBatch] = useState<File[]>([])
   const deckInput = useRef<HTMLInputElement>(null)
   const deckOf = (s: Startup) => privates.get(s.id)?.deckUrl?.trim() || ''
@@ -148,11 +149,19 @@ export function QueuePage() {
   const restartQueue = async () => {
     setBusy(true)
     try {
+      // clear interest first, so nothing is reset if the archive step fails
+      const archived = clearInterest ? await store.orgArchiveInterest() : 0
       for (const s of startups) if (s.status !== 'queued') await store.orgSetStatus(s.id, 'queued')
       await store.orgSetStage('idle', null, 0, 0).catch(() => {}) // projector back to the schedule
-      await Promise.all([reload('startups'), reload('stage')])
+      await Promise.all(['startups', 'stage', 'requests', 'handling', 'notices', 'live'].map((t) => reload(t as Topic)))
       setConfirmRestart(false)
-      toast({ kind: 'success', title: 'Queue restarted', body: 'Every startup is back in the queue. Start the first pitch when ready.' })
+      toast({
+        kind: 'success',
+        title: 'Queue restarted',
+        body: clearInterest
+          ? `Every startup is back in the queue and investors start fresh (${archived} earlier request${archived === 1 ? '' : 's'} archived).`
+          : 'Every startup is back in the queue. Start the first pitch when ready.',
+      })
     } catch (e) {
       toast({ kind: 'error', title: 'Could not restart', body: (e as Error).message })
       await reload('startups')
@@ -380,9 +389,17 @@ export function QueuePage() {
         }
       >
         <p className="text-sm text-slate-700">
-          Every startup goes back to <strong className="text-slate-950">queued</strong> and no one is on stage. Investors’ requests,
-          meetings and the order of the queue are kept. Use this after a dry run, or to run the pitches again.
+          Every startup goes back to <strong className="text-slate-950">queued</strong>, no one is on stage and the projector shows the
+          schedule. The order of the queue is kept. Use this after a dry run, or to run the pitches again.
         </p>
+        <label className="mt-4 flex items-start gap-2 rounded-xl border border-slate-200 p-3 text-sm text-slate-700">
+          <input type="checkbox" checked={clearInterest} onChange={(e) => setClearInterest(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#ffacb7]" />
+          <span>
+            <strong className="text-slate-950">Clear investors’ interest</strong>: archive every request (pitch deck, Meet today,
+            Schedule a call later), meeting approval and message sent, so the live board, the VC-interest screen and investors’
+            buttons start fresh. The archive is kept in the database (<code className="text-xs">requests_archive</code>).
+          </span>
+        </label>
       </Modal>
       <Modal
         open={scheduling}

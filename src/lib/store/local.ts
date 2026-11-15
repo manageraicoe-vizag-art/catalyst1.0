@@ -40,6 +40,8 @@ interface DB {
   notices: Notice[]
   deckViews?: DeckView[]
   stage?: StageRow
+  /** requests cleared by a queue restart, with their handling and notices */
+  requestsArchive?: Array<InterestRequest & { archivedAt: string; handling: RequestHandling | null; notices: Notice[] }>
 }
 
 const DB_KEY = `${STORAGE_PREFIX}:demo-db`
@@ -192,6 +194,14 @@ export class LocalStore implements Store {
       const me = this.requireMe(db)
       let req = db.requests.find((r) => r.investorId === me.id && r.startupId === startupId && r.type === type)
       const t = nowIso()
+      // one meeting option per startup: choosing one withdraws the other
+      if (active && (type === 'meet_today' || type === 'meet_later'))
+        for (const o of db.requests)
+          if (o.investorId === me.id && o.startupId === startupId && o.active && o.type !== type && (o.type === 'meet_today' || o.type === 'meet_later')) {
+            o.active = false
+            o.updatedAt = t
+            o.withdrawnAt = t
+          }
       if (!req) {
         req = { id: uid(), investorId: me.id, startupId, type, active, createdAt: t, updatedAt: t, withdrawnAt: active ? null : t }
         db.requests.push(req)
@@ -367,6 +377,27 @@ export class LocalStore implements Store {
       })
       const s = id ? db.startups.find((x) => x.id === id) : undefined
       if (s) s.status = 'pitching'
+    })
+  }
+
+  async orgArchiveInterest() {
+    this.requireEdit()
+    return this.mutate((db) => {
+      const t = nowIso()
+      db.requestsArchive ??= []
+      for (const r of db.requests)
+        db.requestsArchive.push({
+          ...r,
+          archivedAt: t,
+          handling: db.handling.find((h) => h.requestId === r.id) ?? null,
+          notices: db.notices.filter((n) => n.requestId === r.id),
+        })
+      const ids = new Set(db.requests.map((r) => r.id))
+      db.handling = db.handling.filter((h) => !ids.has(h.requestId))
+      db.notices = db.notices.filter((n) => !ids.has(n.requestId))
+      const count = db.requests.length
+      db.requests = []
+      return count
     })
   }
 

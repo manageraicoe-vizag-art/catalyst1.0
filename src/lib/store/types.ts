@@ -67,6 +67,8 @@ export interface Store {
   orgSetStatus(id: string, status: StartupStatus): Promise<void>
   /** Makes `id` the one startup pitching now (others that were pitching become done). */
   orgSetPitching(id: string | null): Promise<void>
+  /** Archives and clears all investor interest (requests, their handling and notices). Returns how many requests. */
+  orgArchiveInterest(): Promise<number>
   orgListInvestors(): Promise<Investor[]>
   orgCreateInvestor(input: InvestorInput): Promise<Investor>
   orgUpdateInvestor(id: string, input: InvestorInput): Promise<Investor>

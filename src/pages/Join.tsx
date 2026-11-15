@@ -42,8 +42,8 @@ export function InvestorForm({
     const errs: typeof errors = {}
     if (!v.name.trim()) errs.name = 'Please enter your name'
     if (!v.fund.trim()) errs.fund = 'Please enter your fund or firm'
-    if (!v.email.trim() && !v.phone.trim()) errs.email = 'Add an email or a phone number so RTIH can reach you'
-    if (v.email.trim() && !/^\S+@\S+\.\S+$/.test(v.email.trim())) errs.email = 'That email does not look right'
+    if (!v.email.trim()) errs.email = 'Please enter your email so RTIH can reach you'
+    else if (!/^\S+@\S+\.\S+$/.test(v.email.trim())) errs.email = 'That email does not look right'
     setErrors(errs)
     if (Object.keys(errs).length) return
     setBusy(true)
@@ -73,13 +73,13 @@ export function InvestorForm({
         >
           <FundCombobox id="inv-fund" value={v.fund} onChange={(fund) => setV((x) => ({ ...x, fund }))} options={fundSuggestions} />
         </Field>
-        <Field label="Email" error={errors.email} htmlFor="inv-email">
+        <Field label="Email" required error={errors.email} htmlFor="inv-email">
           <Input id="inv-email" type="email" inputMode="email" autoComplete="email" value={v.email} onChange={set('email')} placeholder="you@fund.com" />
         </Field>
-        <Field label="Phone / WhatsApp" htmlFor="inv-phone">
+        <Field label="Phone / WhatsApp (optional)" htmlFor="inv-phone">
           <Input id="inv-phone" type="tel" inputMode="tel" autoComplete="tel" value={v.phone} onChange={set('phone')} placeholder="+91 98xxx xxxxx" />
         </Field>
-        <Field label="Designation" className="sm:col-span-2" htmlFor="inv-des">
+        <Field label="Designation (optional)" className="sm:col-span-2" htmlFor="inv-des">
           <Input id="inv-des" autoComplete="organization-title" value={v.designation} onChange={set('designation')} placeholder="Partner, Principal, Angel…" />
         </Field>
       </div>

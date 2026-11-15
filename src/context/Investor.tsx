@@ -215,18 +215,28 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
             updatedAt: new Date().toISOString(),
             withdrawnAt: null,
           }
+      // Meet today and Schedule a call later are either/or: choosing one withdraws the other
+      const otherType: ActionType | null = type === 'meet_today' ? 'meet_later' : type === 'meet_later' ? 'meet_today' : null
+      const otherKey = otherType ? reqKey(startup.id, otherType) : null
+      const other = otherKey ? requests.get(otherKey) : undefined
+      const replacing = nextActive && !!other?.active
       setPending((p) => new Set(p).add(k))
-      setRequests((m) => new Map(m).set(k, optimistic))
+      setRequests((m) => {
+        const n = new Map(m).set(k, optimistic)
+        if (replacing && otherKey && other) n.set(otherKey, { ...other, active: false })
+        return n
+      })
       try {
         const saved = await store.setRequest(startup.id, type, nextActive)
         setRequests((m) => new Map(m).set(k, saved))
+        if (replacing) void loadRequests()
         if (nextActive) {
           toast({
             title: `Request received: ${ACTION_SHORT[type]}`,
             body:
               type === 'deck'
                 ? `${startup.name}. The RTIH team will review it and share the deck with you.`
-                : `${startup.name}. This is an expression of interest, not a confirmed booking. RTIH will confirm.`,
+                : `${startup.name}. ${replacing && otherType ? `This replaces your “${ACTION_SHORT[otherType]}” request. ` : ''}This is an expression of interest, not a confirmed booking. RTIH will confirm.`,
           })
         } else {
           toast({ kind: 'info', title: `Withdrawn: ${ACTION_SHORT[type]}`, body: startup.name, ms: 2600 })
@@ -237,6 +247,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
           const n = new Map(m)
           if (current) n.set(k, current)
           else n.delete(k)
+          if (replacing && otherKey && other) n.set(otherKey, other)
           return n
         })
         toast({ kind: 'error', title: 'Not saved, please try again', body: (e as Error).message })
@@ -248,7 +259,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
         })
       }
     },
-    [me?.id, requests, toast],
+    [me?.id, requests, toast, loadRequests],
   )
 
   const markAllRead = useCallback(async () => {
