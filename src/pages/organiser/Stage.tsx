@@ -4,6 +4,7 @@ import {
   Check,
   ChevronRight,
   Coffee,
+  FileUp,
   Handshake,
   LayoutDashboard,
   ListOrdered,
@@ -18,7 +19,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { RtihMain } from '../../components/Decor'
 import { PdfSlides } from '../../components/PdfSlides'
@@ -26,7 +27,9 @@ import { QrCode } from '../../components/Qr'
 import { Spinner } from '../../components/ui'
 import { useOrganiser } from '../../context/Organiser'
 import { ACTION_SHORT, LIVE_DISCLAIMER, ROUTING_NOTE } from '../../lib/constants'
+import { deckSource } from '../../lib/deckSource'
 import { fetchDeck } from '../../lib/decks'
+import { getLocalDeck, putLocalDeck, saveLocalDeck } from '../../lib/localDecks'
 import { closePdf, openPdf, type PDFDocumentProxy } from '../../lib/pdf'
 import {
   breakTimes,
@@ -73,7 +76,7 @@ function interestIn(startupId: string, requests: InterestRequest[], live: LiveIn
 }
 
 function Stage() {
-  const { startups, settings, deckFiles, organiser, signOut, stageError, requests, live: liveInterest } = useOrganiser()
+  const { startups, settings, deckFiles, privates, organiser, signOut, stageError, requests, live: liveInterest, reload } = useOrganiser()
   const { view, pitching, nextUp, busy, canEdit, startPitch, endPitch, setPhase, showResults, showSchedule, toggleBreak, addMinute } = useStageControls()
   const isDisplay = organiser?.role === 'display'
   const rootRef = useRef<HTMLDivElement>(null)
@@ -86,21 +89,70 @@ function Stage() {
   const version = deckId ? deckFiles.get(deckId) : undefined
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [showDeck, setShowDeck] = useState(true)
+  // which startup's PDF lookup has finished (so the deck link is only used when there is no PDF)
+  const [checked, setChecked] = useState<string | null>(null)
+  // PDFs loaded on this projector this session win over the shared copy
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [nonce, setNonce] = useState(0)
+  const usePicked = !!deckId && picked.has(deckId)
   useEffect(() => {
     let cancelled = false
     setDoc(null)
+    setChecked(null)
     if (!deckId) return
-    void fetchDeck(deckId, version)
+    void (usePicked ? getLocalDeck(deckId).then((d) => d?.data ?? null) : fetchDeck(deckId, version))
       .then((data) => (data ? openPdf(data) : null))
+      .catch(() => null)
       .then((x) => {
-        if (!cancelled) setDoc(x)
-        else if (x) closePdf(x)
+        if (cancelled) return x && closePdf(x)
+        setDoc(x)
+        setChecked(deckId)
       })
-      .catch(() => {})
     return () => {
       cancelled = true
     }
-  }, [deckId, version])
+  }, [deckId, version, usePicked, nonce])
+
+  // a PDF picked on this laptop (e.g. a founder's USB stick): editors upload it for every screen, the projector keeps it here
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [loadNote, setLoadNote] = useState<string | null>(null)
+  const loadPdf = async (f: File) => {
+    const id = deckId
+    if (!id) return
+    const data = await f.arrayBuffer()
+    try {
+      closePdf(await openPdf(data))
+    } catch {
+      return setLoadNote(`“${f.name}” is not a PDF that can be shown.`)
+    }
+    let shared = false
+    if (canEdit) {
+      try {
+        await store.orgUploadDeck(id, f)
+        const v = (await store.orgListDeckFiles()).get(id)
+        if (v) await putLocalDeck({ startupId: id, name: f.name, size: f.size, savedAt: v, data })
+        shared = true
+        void reload('decks')
+      } catch {
+        /* keep it on this laptop below */
+      }
+    }
+    if (!shared) await saveLocalDeck(id, f, data)
+    setPicked((p) => new Set(p).add(id))
+    setNonce((n) => n + 1)
+    setLoadNote(shared ? null : `Showing “${f.name}” from this laptop.`)
+  }
+  useEffect(() => setLoadNote(null), [deckId])
+
+  // no PDF: show the startup's deck link instead (Google Slides plays with the clicker; Drive/Canva/web pages scroll)
+  const linkUrl = deckId ? privates.get(deckId)?.deckUrl?.trim() ?? '' : ''
+  const frameSrc = useMemo(() => {
+    const src = linkUrl ? deckSource(linkUrl) : null
+    if (!src) return null
+    if (src.kind === 'slides' || src.kind === 'drive' || src.kind === 'frame') return src.embed
+    return src.kind === 'pdf' ? src.fetchUrl : null
+  }, [linkUrl])
+  const frameRef = useRef<HTMLIFrameElement>(null)
   useEffect(
     () => () => {
       if (doc) closePdf(doc)
@@ -130,6 +182,9 @@ function Stage() {
   const deckOn = !!doc && showDeck && live
   const deckOnRef = useRef(deckOn)
   deckOnRef.current = deckOn
+  const frameOn = !doc && checked === deckId && !!frameSrc && showDeck && live
+  const frameOnRef = useRef(frameOn)
+  frameOnRef.current = frameOn
   const totalRef = useRef(total)
   totalRef.current = total
   const slide = useCallback((d: 1 | -1) => {
@@ -169,6 +224,11 @@ function Stage() {
         return
       }
       if ((e.key === 'f' || e.key === 'F') && !e.metaKey && !e.ctrlKey) return toggleFull()
+      if (frameOnRef.current && (CLICKER_NEXT.has(e.key) || CLICKER_PREV.has(e.key))) {
+        // the key reached this page instead of the embedded deck: hand focus to the deck for the next press
+        frameRef.current?.focus()
+        return
+      }
       if (CLICKER_NEXT.has(e.key)) (e.preventDefault(), slide(1))
       else if (CLICKER_PREV.has(e.key)) (e.preventDefault(), slide(-1))
     }
@@ -177,6 +237,7 @@ function Stage() {
   }, [slide, toggleFull])
 
   const [controls, setControls] = useState(true)
+  const wakeRef = useRef(() => {})
   useEffect(() => {
     let t = window.setTimeout(() => setControls(false), 3500)
     const wake = () => {
@@ -184,6 +245,7 @@ function Stage() {
       window.clearTimeout(t)
       t = window.setTimeout(() => setControls(false), 3500)
     }
+    wakeRef.current = wake
     window.addEventListener('mousemove', wake)
     return () => {
       window.clearTimeout(t)
@@ -204,6 +266,24 @@ function Stage() {
         <PdfSlides doc={doc!} page={shown} />
         <TimerChip phase={view.phase as 'pitch' | 'qa'} endsAt={view.endsAt} />
       </>
+    ) : frameOn ? (
+      <>
+        <iframe
+          key={frameSrc!}
+          ref={frameRef}
+          src={frameSrc!}
+          title={`${onStage.name} pitch deck`}
+          className="absolute inset-0 h-full w-full border-0 bg-black"
+          allow="fullscreen"
+          allowFullScreen
+          referrerPolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation allow-forms"
+          onLoad={() => frameRef.current?.focus()}
+        />
+        {/* the deck page swallows mouse moves: this strip along the bottom still brings up the controls */}
+        <div className="absolute inset-x-0 bottom-0 z-10 h-10" onMouseMove={() => wakeRef.current()} aria-hidden />
+        <TimerChip phase={view.phase as 'pitch' | 'qa'} endsAt={view.endsAt} />
+      </>
     ) : (
       <NowScreen startup={onStage} phase={view.phase as 'pitch' | 'qa'} endsAt={view.endsAt} nextUp={nextUp} slots={slots} />
     )
@@ -215,13 +295,28 @@ function Stage() {
     <div ref={rootRef} className={cn('circuit-bg fixed inset-0 select-none overflow-hidden bg-black', !controls && 'cursor-none')}>
       {screen}
 
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          e.target.value = ''
+          if (f) void loadPdf(f)
+        }}
+      />
+      {loadNote && controls && (
+        <p className="absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full bg-black/85 px-4 py-1.5 text-sm text-slate-700">{loadNote}</p>
+      )}
+
       {stageError && (
         <p className={cn('absolute inset-x-0 top-0 z-30 bg-amber-900/95 px-4 py-2 text-center text-sm text-amber-50 transition-opacity', !controls && 'opacity-0')}>
           Stage not connected: {stageError}
         </p>
       )}
 
-      {/* controls appear when the mouse moves; the projector login only gets full screen and sign out */}
+      {/* controls appear when the mouse moves; the projector login gets deck, full screen and sign out only */}
       <div className={cn('absolute inset-x-0 bottom-0 z-20 flex justify-center p-3 transition-opacity duration-300', !controls && 'pointer-events-none opacity-0')}>
         <div className="flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-black/90 p-1.5 shadow-xl">
           {canEdit &&
@@ -267,9 +362,14 @@ function Stage() {
                 </Ctl>
               </>
             ))}
-          {doc && live && (
+          {(doc || frameSrc) && live && (
             <Ctl icon={Presentation} onClick={() => setShowDeck((v) => !v)}>
               {showDeck ? 'Hide deck' : 'Show deck'}
+            </Ctl>
+          )}
+          {deckId && live && (
+            <Ctl icon={FileUp} onClick={() => fileRef.current?.click()}>
+              {doc ? 'Replace PDF' : 'Load PDF'}
             </Ctl>
           )}
           {canEdit && <span className="mx-1 h-6 w-px bg-slate-200" aria-hidden />}
