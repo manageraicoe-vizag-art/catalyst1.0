@@ -35,7 +35,7 @@ export const EVENT_SCHEDULE = {
 }
 
 /** Minutes for each stage phase. */
-export const PHASE_MINUTES = { pitch: 5, qa: 5, interest: 3 } as const
+export const PHASE_MINUTES = { pitch: 5, qa: 5, interest: 1 } as const
 
 const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 

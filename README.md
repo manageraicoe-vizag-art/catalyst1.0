@@ -75,7 +75,7 @@ An editor (admin1) runs it from the **Pitch queue** page on any device:
 
 1. **Start next pitch** puts the startup on stage: its **deck** fills the projector with a **5:00 pitch** timer, then a
    **5:00 Q&A** timer, then the **investor-interest screen** (“Interested in …? Tap **Meet today** or **Schedule a call
-   later**”, 3:00) and then the **VC interest results** for that startup: request counts for each option and the funds
+   later**”, 1:00) and then the **VC interest results** for that startup: request counts for each option and the funds
    interested (no fund-by-option detail). Investors' phones show the same two buttons at the top of the app. The results
    stay up until admin1 starts the next pitch. **+1 min**, **Q&A**, **Investors respond** and **Show VC interest**
    buttons extend or skip a phase. The presenter flips their own slides with a clicker plugged into the projector laptop.

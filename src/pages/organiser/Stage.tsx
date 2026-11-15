@@ -642,7 +642,7 @@ function InterestScreen({ startup, endsAt, nextUp, slots, responded }: { startup
       <Header />
       <div className="grid min-h-0 flex-1 grid-cols-[1.45fr_1fr] items-center gap-[4vw]">
         <div>
-          <p className="eyebrow text-[1.3vw] text-brand-800">Investors · your {PHASE_MINUTES.interest} minutes</p>
+          <p className="eyebrow text-[1.3vw] text-brand-800">Investors · your {PHASE_MINUTES.interest === 1 ? 'minute' : `${PHASE_MINUTES.interest} minutes`}</p>
           <h1 className="mt-[2vh] text-[4vw] font-bold leading-[1.08] text-slate-950">
             Interested in <span className="text-brand-800">{startup.name}</span>?
           </h1>
