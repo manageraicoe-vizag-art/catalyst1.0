@@ -480,7 +480,8 @@ function ScheduleScreen({ startups, nextUp, slots, eventTitle }: { startups: Sta
     for (const b of EVENT_SCHEDULE.breaks) if (i + 1 === b.afterSlot && i < visible.length - 1) rows.push({ kind: 'break', label: b.label, ...breakTimes(b) })
   })
   const half = Math.ceil(rows.length / 2)
-  const qrPx = Math.round(window.innerWidth * 0.085)
+  // big enough to scan from the back of the hall: fills the column under "Up next"
+  const qrPx = Math.round(Math.min(window.innerWidth * 0.17, window.innerHeight * 0.42))
 
   return (
     <div className="flex h-full flex-col px-[3.5vw] pb-[4vh] pt-[3.5vh]">
@@ -525,13 +526,12 @@ function ScheduleScreen({ startups, nextUp, slots, eventTitle }: { startups: Sta
               {nextUp.sector && <p className="mt-[0.6vh] text-[1.15vw] text-slate-500">{nextUp.sector}</p>}
             </div>
           )}
-          <div className="mt-auto flex items-center gap-[1vw] rounded-[1vw] border border-slate-200 bg-white/60 p-[1vw]">
-            <QrCode value={eventLink()} size={qrPx} />
-            <p className="text-[1.15vw] leading-snug text-slate-700">
-              <span className="font-semibold text-slate-950">Investors</span>
-              <br />
-              scan to join the Catalyst app
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-[1.6vh] rounded-[1vw] border border-slate-200 bg-white/60 p-[1.2vw] text-center">
+            <p className="text-[1.35vw] leading-snug text-slate-700">
+              <span className="font-semibold text-slate-950">Investors:</span> scan to join the Catalyst app
             </p>
+            <QrCode value={eventLink()} size={qrPx} />
+            <p className="text-[1vw] text-slate-500">Then tap Meet today or Schedule a call later on any startup</p>
           </div>
         </aside>
       </div>
