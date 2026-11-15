@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, BarChart3, CalendarClock, Check, ChevronLeft, ChevronRight, Coffee, EyeOff, GripVertical, ListOrdered, MessagesSquare, Mic, Monitor, Pencil, Plus, Presentation, RotateCcw, SkipForward, Square, Undo2, Upload, Users } from 'lucide-react'
+import { ArrowDown, ArrowUp, BarChart3, CalendarClock, Check, ChevronLeft, ChevronRight, Coffee, EyeOff, FileUp, GripVertical, ListOrdered, MessagesSquare, Mic, Monitor, Pencil, Plus, Presentation, RotateCcw, SkipForward, Square, Undo2, Upload, Users } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DeckPresenter } from '../../components/DeckPresenter'
 import { Badge, Button, EmptyState, Modal, PageHeader } from '../../components/ui'
@@ -20,6 +20,7 @@ import {
 import { store } from '../../lib/store'
 import type { Startup, StartupStatus } from '../../lib/types'
 import { cn } from '../../lib/utils'
+import { DeckUploadDialog } from './DeckUploadDialog'
 import { ImportDialog } from './ImportDialog'
 import { StartupEditor } from './StartupEditor'
 import { useStageControls } from './useStageControls'
@@ -34,6 +35,8 @@ export function QueuePage() {
   const [busy, setBusy] = useState(false)
   const [presenting, setPresenting] = useState<Startup | null>(null)
   const [confirmRestart, setConfirmRestart] = useState(false)
+  const [deckBatch, setDeckBatch] = useState<File[]>([])
+  const deckInput = useRef<HTMLInputElement>(null)
   const deckOf = (s: Startup) => privates.get(s.id)?.deckUrl?.trim() || ''
   // decks ready to present: uploaded for the projector, or saved only on this laptop (re-read when the presenter closes)
   const [laptopDecks, setLaptopDecks] = useState<Set<string>>(new Set())
@@ -180,6 +183,20 @@ export function QueuePage() {
         actions={
           canEdit && (
           <>
+            <Button variant="secondary" size="sm" icon={<FileUp className="h-4 w-4" />} onClick={() => deckInput.current?.click()}>
+              Upload deck PDFs
+            </Button>
+            <input
+              ref={deckInput}
+              type="file"
+              accept="application/pdf,.pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                setDeckBatch(Array.from(e.target.files ?? []))
+                e.target.value = ''
+              }}
+            />
             <Button variant="secondary" size="sm" icon={<CalendarClock className="h-4 w-4" />} onClick={() => setScheduling(true)}>
               Apply 16 Nov schedule
             </Button>
@@ -345,6 +362,7 @@ export function QueuePage() {
         </ol>
       )}
 
+      <DeckUploadDialog files={deckBatch} onClose={() => setDeckBatch([])} />
       {presenting && <DeckPresenter startup={presenting} deckUrl={deckOf(presenting)} onClose={() => setPresenting(null)} />}
       <Modal
         open={confirmRestart}
