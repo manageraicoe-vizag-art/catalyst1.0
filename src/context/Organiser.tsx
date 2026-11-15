@@ -10,6 +10,7 @@ import type {
   Notice,
   Organiser,
   RequestHandling,
+  StageSnapshot,
   Startup,
   StartupPrivate,
   Topic,
@@ -30,6 +31,12 @@ interface OrganiserState {
   notices: Notice[]
   live: LiveInterest[]
   deckViews: DeckView[]
+  /** shared stage row (who is on, phase timers, current slide); null until loaded */
+  stage: StageSnapshot | null
+  /** why the stage could not be loaded (e.g. database update 005 not installed yet) */
+  stageError: string | null
+  /** deck PDFs ready for the projector: startup id → version */
+  deckFiles: Map<string, string>
   /** request ids that arrived (or changed) since this dashboard opened, for highlighting */
   fresh: Set<string>
   signIn: (email: string, secret: string) => Promise<void>
@@ -53,6 +60,9 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
   const [notices, setNotices] = useState<Notice[]>([])
   const [live, setLive] = useState<LiveInterest[]>([])
   const [deckViews, setDeckViews] = useState<DeckView[]>([])
+  const [stage, setStage] = useState<StageSnapshot | null>(null)
+  const [stageError, setStageError] = useState<string | null>(null)
+  const [deckFiles, setDeckFiles] = useState<Map<string, string>>(new Map())
   const [fresh, setFresh] = useState<Set<string>>(new Set())
   const seen = useRef<Map<string, string> | null>(null)
 
@@ -109,6 +119,17 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
           case 'deckViews':
             setDeckViews(await store.orgListDeckViews())
             break
+          case 'stage':
+            try {
+              setStage(await store.getStage())
+              setStageError(null)
+            } catch (e) {
+              setStageError((e as Error).message)
+            }
+            break
+          case 'decks':
+            setDeckFiles(await store.orgListDeckFiles())
+            break
         }
       } catch (e) {
         console.warn('organiser refresh failed', topic, e)
@@ -117,7 +138,7 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
     [ingestRequests],
   )
 
-  const ALL: Topic[] = useMemo(() => ['settings', 'startups', 'private', 'investors', 'requests', 'handling', 'notices', 'live', 'deckViews'], [])
+  const ALL: Topic[] = useMemo(() => ['settings', 'startups', 'private', 'investors', 'requests', 'handling', 'notices', 'live', 'deckViews', 'stage', 'decks'], [])
 
   const reload = useCallback(
     async (topic?: Topic) => {
@@ -152,9 +173,12 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
     const poll = window.setInterval(() => {
       if (document.visibilityState === 'visible') ALL.forEach(schedule)
     }, store.mode === 'live' ? 15000 : 60000)
+    // the stage drives the projector: re-check it often in case a realtime message is missed
+    const stagePoll = window.setInterval(() => schedule('stage'), 5000)
     return () => {
       unsub()
       window.clearInterval(poll)
+      window.clearInterval(stagePoll)
       timers.forEach((t) => window.clearTimeout(t))
     }
   }, [organiser, loadTopic, ALL])
@@ -202,13 +226,16 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
       notices,
       live,
       deckViews,
+      stage,
+      stageError,
+      deckFiles,
       fresh,
       signIn,
       signOut,
       reload,
       setStartups,
     }),
-    [ready, organiser, settings, startups, privates, investors, requests, handling, notices, live, deckViews, fresh, signIn, signOut, reload],
+    [ready, organiser, settings, startups, privates, investors, requests, handling, notices, live, deckViews, stage, stageError, deckFiles, fresh, signIn, signOut, reload],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

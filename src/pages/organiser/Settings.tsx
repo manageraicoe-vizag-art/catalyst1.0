@@ -5,7 +5,7 @@ import { Button, Field, Input, Modal, Notice, PageHeader, Textarea } from '../..
 import { useOrganiser } from '../../context/Organiser'
 import { useToast } from '../../context/Toast'
 import { demoStore, isDemo, store } from '../../lib/store'
-import type { EventSettings } from '../../lib/types'
+import type { EventSettings, OrganiserRole } from '../../lib/types'
 import { downloadFile, eventLink } from '../../lib/utils'
 
 export function SettingsPage() {
@@ -177,7 +177,7 @@ export function SettingsPage() {
   )
 }
 
-function MyAccount({ email, role }: { email: string; role: 'editor' | 'viewer' }) {
+function MyAccount({ email, role }: { email: string; role: OrganiserRole }) {
   const { toast } = useToast()
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
@@ -209,7 +209,7 @@ function MyAccount({ email, role }: { email: string; role: 'editor' | 'viewer' }
       </h2>
       <p className="mb-4 text-sm text-slate-600">
         Signed in as <strong className="text-slate-900">{email}</strong> ·{' '}
-        {role === 'editor' ? 'Editor (full control)' : 'Viewer (read-only overview)'}
+        {role === 'editor' ? 'Editor (full control)' : role === 'display' ? 'Projector (stage screen only)' : 'Viewer (read-only overview)'}
       </p>
       {isDemo ? (
         <p className="text-sm text-slate-500">Passwords apply once the live database is connected.</p>

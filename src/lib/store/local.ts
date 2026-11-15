@@ -10,11 +10,14 @@ import type {
   Notice,
   Organiser,
   RequestHandling,
+  StageMode,
+  StageRow,
   Startup,
   StartupPrivate,
   StartupStatus,
   Topic,
 } from '../types'
+import { getLocalDeck, listLocalDeckVersions, removeLocalDeck, saveLocalDeck } from '../localDecks'
 import { nowIso, token, uid } from '../utils'
 import { buildSeed } from './seed'
 import type { Audience, PrivateDraft, Store, StartupDraft } from './types'
@@ -22,6 +25,8 @@ import type { Audience, PrivateDraft, Store, StartupDraft } from './types'
 /** Demo passcodes for the organiser dashboard in DEMO mode only. */
 export const DEMO_ORGANISER_PASSCODE = 'catalyst'
 export const DEMO_VIEWER_PASSCODE = 'catalyst-view'
+/** The projector login (stage screen only). */
+export const DEMO_DISPLAY_PASSCODE = 'catalyst-display'
 
 interface DB {
   version: 1
@@ -34,12 +39,15 @@ interface DB {
   handling: RequestHandling[]
   notices: Notice[]
   deckViews?: DeckView[]
+  stage?: StageRow
 }
 
 const DB_KEY = `${STORAGE_PREFIX}:demo-db`
 const ME_KEY = `${STORAGE_PREFIX}:demo-me`
 const ORG_KEY = `${STORAGE_PREFIX}:demo-org`
-const ALL_TOPICS: Topic[] = ['settings', 'startups', 'requests', 'handling', 'live', 'notices', 'investors', 'private', 'deckViews']
+const ALL_TOPICS: Topic[] = ['settings', 'startups', 'requests', 'handling', 'live', 'notices', 'investors', 'private', 'deckViews', 'stage', 'decks']
+
+const IDLE_STAGE = (): StageRow => ({ startupId: null, mode: 'idle', startedAt: nowIso(), pitchSecs: 300, qaSecs: 300, deckPage: 1, updatedAt: nowIso() })
 
 function safeGet(key: string): string | null {
   try {
@@ -254,18 +262,20 @@ export class LocalStore implements Store {
     const raw = safeGet(ORG_KEY)
     if (!raw) return null
     const org = JSON.parse(raw) as Organiser
-    const role: Organiser['role'] = org.role === 'editor' ? 'editor' : 'viewer'
+    const role: Organiser['role'] = org.role === 'editor' || org.role === 'display' ? org.role : 'viewer'
     return { ...org, role }
   }
 
   async organiserSignIn(email: string, secret: string) {
     const code = secret.trim().toLowerCase()
-    if (code !== DEMO_ORGANISER_PASSCODE && code !== DEMO_VIEWER_PASSCODE)
-      throw new Error(`Incorrect passcode. In demo mode use “${DEMO_ORGANISER_PASSCODE}” (editor) or “${DEMO_VIEWER_PASSCODE}” (view-only).`)
+    if (code !== DEMO_ORGANISER_PASSCODE && code !== DEMO_VIEWER_PASSCODE && code !== DEMO_DISPLAY_PASSCODE)
+      throw new Error(
+        `Incorrect passcode. In demo mode use “${DEMO_ORGANISER_PASSCODE}” (editor), “${DEMO_VIEWER_PASSCODE}” (view-only) or “${DEMO_DISPLAY_PASSCODE}” (projector).`,
+      )
     const org: Organiser = {
       email: email.trim() || 'organiser@demo',
       name: email.split('@')[0] || 'Organiser',
-      role: code === DEMO_ORGANISER_PASSCODE ? 'editor' : 'viewer',
+      role: code === DEMO_ORGANISER_PASSCODE ? 'editor' : code === DEMO_DISPLAY_PASSCODE ? 'display' : 'viewer',
     }
     safeSet(ORG_KEY, JSON.stringify(org))
     return org
@@ -507,6 +517,79 @@ export class LocalStore implements Store {
 
   exportJson(): string {
     return JSON.stringify(this.read(), null, 2)
+  }
+
+  // ---------- stage screen (shared by every tab of this browser) ----------
+  async getStage() {
+    return { stage: this.read().stage ?? IDLE_STAGE(), serverOffsetMs: 0 }
+  }
+
+  async orgStartPitch(id: string, pitchSecs: number, qaSecs: number) {
+    this.requireEdit()
+    this.mutate((db) => {
+      db.startups.forEach((s) => s.status === 'pitching' && s.id !== id && (s.status = 'done'))
+      const s = db.startups.find((x) => x.id === id)
+      if (s) s.status = 'pitching'
+      db.stage = { startupId: id, mode: 'running', startedAt: nowIso(), pitchSecs, qaSecs, deckPage: 1, updatedAt: nowIso() }
+    })
+  }
+
+  async orgSetStage(mode: StageMode, startupId: string | null, pitchSecs: number, qaSecs: number) {
+    this.requireEdit()
+    this.mutate((db) => {
+      const prev = db.stage ?? IDLE_STAGE()
+      db.stage = {
+        startupId,
+        mode,
+        startedAt: nowIso(),
+        pitchSecs: Math.max(pitchSecs, 0),
+        qaSecs: Math.max(qaSecs, 0),
+        deckPage: prev.startupId === startupId ? prev.deckPage : 1,
+        updatedAt: nowIso(),
+      }
+    })
+  }
+
+  async orgStageAddTime(secs: number) {
+    this.requireEdit()
+    this.mutate((db) => {
+      const st = db.stage
+      if (!st || st.mode !== 'running') return
+      const e = (Date.now() - Date.parse(st.startedAt)) / 1000
+      if (e < st.pitchSecs) st.pitchSecs = Math.max(st.pitchSecs + secs, 0)
+      else if (e < st.pitchSecs + st.qaSecs) st.qaSecs = Math.max(st.qaSecs + secs, 0)
+      st.updatedAt = nowIso()
+    })
+  }
+
+  async orgStageSlide(page: number) {
+    this.requireOrg()
+    this.mutate((db) => {
+      db.stage = { ...(db.stage ?? IDLE_STAGE()), deckPage: Math.max(page, 1), updatedAt: nowIso() }
+    })
+  }
+
+  // Demo decks live in this browser's IndexedDB
+  async orgListDeckFiles() {
+    this.requireOrg()
+    return listLocalDeckVersions()
+  }
+
+  async orgUploadDeck(startupId: string, file: File) {
+    this.requireEdit()
+    if (!(await saveLocalDeck(startupId, file, await file.arrayBuffer()))) throw new Error('This browser would not store the PDF.')
+    this.bus.dispatchEvent(new Event('change'))
+  }
+
+  async orgDownloadDeck(startupId: string) {
+    this.requireOrg()
+    return (await getLocalDeck(startupId))?.data ?? null
+  }
+
+  async orgDeleteDeck(startupId: string) {
+    this.requireEdit()
+    await removeLocalDeck(startupId)
+    this.bus.dispatchEvent(new Event('change'))
   }
 
   subscribe(_audience: Audience, cb: (topic: Topic) => void) {

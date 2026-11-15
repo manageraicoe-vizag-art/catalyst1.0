@@ -19,6 +19,7 @@ import { OverviewPage } from './pages/organiser/Overview'
 import { QueuePage } from './pages/organiser/Queue'
 import { RequestsPage } from './pages/organiser/Requests'
 import { SettingsPage } from './pages/organiser/Settings'
+import { StagePage } from './pages/organiser/Stage'
 
 function RequireInvestor({ children }: { children: ReactNode }) {
   const { ready, me, unread } = useInvestor()
@@ -80,6 +81,7 @@ function OrganiserRoutes() {
   return (
     <Routes>
       <Route path="board" element={<ProjectorBoard />} />
+      <Route path="stage" element={<StagePage />} />
       <Route
         path="*"
         element={

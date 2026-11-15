@@ -5,7 +5,7 @@ Mobile-first web app for **Catalyst 1.0 Demo Day (16 Nov)**, hosted by **RTIH Vi
 It works on phones, tablets and laptops, and is hosted free on GitHub Pages.
 
 - **Investors** open one event link, enter name / fund / contact once, then tap **Request pitch deck**, **Request a
-  meeting today** or **Request a meeting after the event** on any startup. Every tap saves instantly and can be withdrawn.
+  meeting today** or **Schedule a call after the event** on any startup. Every tap saves instantly and can be withdrawn.
 - **Live VC board** shows which funds expressed interest in each startup, updating in real time, with a clear
   "expressions of interest only, not an investment decision or commitment" disclaimer.
 - **RTIH organisers** get a separate, sign-in-protected dashboard: a real-time request feed, pitch queue control
@@ -67,6 +67,32 @@ startups and funds** so you can try every screen.
 5. **Pitch queue → Next startup** advances the *Now pitching* banner on every investor's phone.
 6. **Overview** shows the totals, and **Live board (projector)** gives a full-screen board for the hall.
 7. Export CSVs any time from Requests, Meetings and Investors.
+
+## Projector stage screen (admin1 drives, admin2 displays)
+
+The hall projector runs a dedicated **display** login (admin2) that shows only the stage screen, `…/#/organiser/stage`.
+An editor (admin1) runs it from the **Pitch queue** page on any device:
+
+1. **Start next pitch** puts the startup on stage: its **deck** fills the projector with a **5:00 pitch** timer, then a
+   **5:00 Q&A** timer, then the **investor-interest screen** (“Interested in …? Tap **Meet today** or **Schedule a call
+   later**”). Investors' phones show the same two buttons at the top of the app. The interest screen stays up until
+   admin1 starts the next pitch. **+1 min**, **Q&A** and **Investor interest** buttons skip or extend a phase.
+2. **Decks:** open a startup's present icon, **Download PDF** (Drive/Slides links) and load it with **PDF from laptop**.
+   Editors' uploads go to the private `decks` bucket and appear on the projector; the projector downloads each deck once
+   and pre-loads the next one. A clicker plugged into the projector (or admin1's slide buttons) flips the slides.
+3. **Apply 16 Nov schedule** orders the queue to match the printed pitch schedule; slot times appear everywhere.
+
+**One-time setup (live mode):**
+
+1. Supabase → *SQL Editor*: run [`supabase/migrations/005_stage_display.sql`](supabase/migrations/005_stage_display.sql)
+   (safe to re-run; it is also part of `schema.sql`).
+2. *Authentication → Users → Add user*: the projector's email + password, tick **Auto Confirm User**. Then in the SQL Editor:
+   ```sql
+   insert into public.organisers (email, name, role) values ('display@rtih.in', 'Projector', 'display')
+     on conflict (email) do update set role = 'display';
+   ```
+3. On the projector laptop open `…/#/organiser`, sign in as that user (it opens the stage screen), and press **F** for
+   full screen. Demo mode: passcode `catalyst-display`.
 
 ## Privacy (enforced in the database)
 

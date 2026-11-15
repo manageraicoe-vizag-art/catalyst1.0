@@ -8,6 +8,7 @@ import type {
   Investor,
   InvestorInput,
   LiveInterest,
+  StageSnapshot,
   Notice,
   Startup,
   Topic,
@@ -27,6 +28,8 @@ interface InvestorState {
   pending: Set<string>
   notices: Notice[]
   live: LiveInterest[]
+  /** shared stage row: the app prompts investors when the interest window opens */
+  stage: StageSnapshot | null
   /** Participating funds + funds teammates already entered */
   fundOptions: string[]
   unread: number
@@ -52,6 +55,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<Set<string>>(new Set())
   const [notices, setNotices] = useState<Notice[]>([])
   const [live, setLive] = useState<LiveInterest[]>([])
+  const [stage, setStage] = useState<StageSnapshot | null>(null)
   const [enteredFunds, setEnteredFunds] = useState<string[]>([])
   const knownNotices = useRef<Set<string> | null>(null)
   const pendingRef = useRef(pending)
@@ -96,6 +100,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
         else if (topic === 'requests') await loadRequests()
         else if (topic === 'notices') await loadNotices()
         else if (topic === 'investors') setMe(await store.getMe())
+        else if (topic === 'stage') setStage(await store.getStage())
       } catch (e) {
         console.warn('refresh failed', topic, e)
       }
@@ -111,6 +116,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
       store.listFundSuggestions().catch(() => [] as string[]),
     ])
     setEnteredFunds(funds)
+    void store.getStage().then(setStage).catch(() => {})
     setSettings(s)
     setStartups(st)
     setMe(m)
@@ -140,7 +146,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
     }
     const unsub = store.subscribe('investor', schedule)
     const poll = window.setInterval(() => {
-      if (document.visibilityState === 'visible') (['startups', 'live', 'notices', 'settings'] as Topic[]).forEach(schedule)
+      if (document.visibilityState === 'visible') (['startups', 'live', 'notices', 'settings', 'stage'] as Topic[]).forEach(schedule)
     }, store.mode === 'live' ? 20000 : 60000)
     const onVis = () => {
       if (document.visibilityState === 'visible') void reloadAll().catch(() => {})
@@ -263,6 +269,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
       pending,
       notices,
       live,
+      stage,
       fundOptions: mergeFunds(settings.participatingFunds, enteredFunds),
       unread: notices.filter((n) => !n.readAt).length,
       register,
@@ -273,7 +280,7 @@ export function InvestorProvider({ children }: { children: ReactNode }) {
       markAllRead,
       reload: reloadAll,
     }),
-    [ready, error, settings, startups, me, requests, pending, notices, live, enteredFunds, register, claimInvite, updateMe, forget, toggle, markAllRead, reloadAll],
+    [ready, error, settings, startups, me, requests, pending, notices, live, stage, enteredFunds, register, claimInvite, updateMe, forget, toggle, markAllRead, reloadAll],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

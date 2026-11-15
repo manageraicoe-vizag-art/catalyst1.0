@@ -78,7 +78,7 @@ export function MePage() {
         {myStartups.length === 0 ? (
           <EmptyState
             title="No requests yet"
-            body="Browse the startups and tap Pitch deck, Meet today or Meet after event."
+            body="Browse the startups and tap Pitch deck, Meet today or Schedule a call later."
             action={
               <Link to="/startups">
                 <Button>See startups</Button>

@@ -11,6 +11,8 @@ import type {
   RequestHandling,
   Startup,
   StartupPrivate,
+  StageMode,
+  StageSnapshot,
   StartupStatus,
   Topic,
 } from '../types'
@@ -78,6 +80,22 @@ export interface Store {
   orgSaveSettings(settings: EventSettings): Promise<EventSettings>
   orgLiveInterest(): Promise<LiveInterest[]>
   orgListDeckViews(): Promise<DeckView[]>
+
+  // ---- stage screen ----
+  /** Shared stage state (anyone may read it: investors' phones show the interest prompt). */
+  getStage(): Promise<StageSnapshot>
+  /** Puts a startup on stage (the previous one becomes pitched) and starts its pitch timer. */
+  orgStartPitch(id: string, pitchSecs: number, qaSecs: number): Promise<void>
+  orgSetStage(mode: StageMode, startupId: string | null, pitchSecs: number, qaSecs: number): Promise<void>
+  /** Adds time to whichever timer is running (pitch or Q&A). */
+  orgStageAddTime(secs: number): Promise<void>
+  /** Current slide of the deck on the projector (any organiser, so the projector's clicker can sync it). */
+  orgStageSlide(page: number): Promise<void>
+  /** Deck PDFs for the projector: startup id → version (changes when the file is replaced). */
+  orgListDeckFiles(): Promise<Map<string, string>>
+  orgUploadDeck(startupId: string, file: File): Promise<void>
+  orgDownloadDeck(startupId: string): Promise<ArrayBuffer | null>
+  orgDeleteDeck(startupId: string): Promise<void>
 
   /** Calls `cb` when data in a topic may have changed (realtime or cross-tab). */
   subscribe(audience: Audience, cb: (topic: Topic) => void): () => void

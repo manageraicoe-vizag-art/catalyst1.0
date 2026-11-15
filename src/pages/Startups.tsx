@@ -1,15 +1,17 @@
-import { ArrowDown, ChevronRight, Mic, Search, Users } from 'lucide-react'
+import { ArrowDown, ChevronRight, Hand, Mic, Search, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ActionToggles } from '../components/ActionToggles'
 import { Badge, EmptyState, Input, Segmented } from '../components/ui'
 import { reqKey, useInvestor } from '../context/Investor'
 import { ROUTING_NOTE } from '../lib/constants'
+import { useStageView } from '../lib/stage'
 import { ACTION_TYPES, type Startup } from '../lib/types'
 import { cn } from '../lib/utils'
 
 export function StartupsPage() {
-  const { startups, requests, live, me, settings } = useInvestor()
+  const { startups, requests, live, me, settings, stage } = useInvestor()
+  const view = useStageView(stage)
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<'all' | 'mine'>('all')
 
@@ -36,6 +38,8 @@ export function StartupsPage() {
   })
 
   const pitching = startups.find((s) => s.status === 'pitching')
+  // the projector's "investors, your turn" window for the startup that just pitched (stays until the next pitch)
+  const askFor = view.phase === 'interest' ? startups.find((s) => s.id === view.startupId) : undefined
 
   return (
     <div>
@@ -65,6 +69,17 @@ export function StartupsPage() {
           </span>
           <ArrowDown className="h-5 w-5 shrink-0" aria-hidden />
         </a>
+      )}
+
+      {askFor && (
+        <section className="mb-4 animate-rise rounded-2xl border-2 border-brand-800 bg-brand-50 p-4" aria-live="polite">
+          <p className="flex items-center gap-2 font-pixel text-[11px] font-bold uppercase tracking-wide text-brand-800">
+            <Hand className="h-4 w-4" aria-hidden /> Investors · your turn
+          </p>
+          <p className="mt-1.5 text-lg font-bold text-slate-950">Interested in {askFor.name}?</p>
+          <p className="mb-3 text-sm text-slate-600">Tap to let the RTIH team know. You can change it any time.</p>
+          <ActionToggles startup={askFor} types={['meet_today', 'meet_later']} />
+        </section>
       )}
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">

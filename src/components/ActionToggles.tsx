@@ -13,13 +13,22 @@ export const ACTION_ICON: Record<ActionType, typeof FileText> = {
 }
 
 /** Three independent toggles. Each tap saves immediately. */
-export function ActionToggles({ startup, layout = 'compact' }: { startup: Startup; layout?: 'compact' | 'full' }) {
+export function ActionToggles({
+  startup,
+  layout = 'compact',
+  types = ACTION_TYPES,
+}: {
+  startup: Startup
+  layout?: 'compact' | 'full'
+  /** which options to show (default: all three) */
+  types?: ActionType[]
+}) {
   const { requests, pending, toggle } = useInvestor()
   const [viewing, setViewing] = useState(false)
 
   return (
-    <div className={cn('grid gap-2', layout === 'compact' ? 'grid-cols-3' : 'grid-cols-1')}>
-      {ACTION_TYPES.map((type) => {
+    <div className={cn('grid gap-2', layout === 'full' ? 'grid-cols-1' : types.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+      {types.map((type) => {
         if (type === 'deck' && startup.deckAvailable)
           return (
             <button

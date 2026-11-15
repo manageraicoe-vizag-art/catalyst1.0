@@ -194,7 +194,7 @@ export function JoinPage() {
 
         <aside className="space-y-3">
           {[
-            { icon: <MousePointerClick className="h-5 w-5" />, t: 'Tap to respond', b: 'Each startup has three options: pitch deck, meeting today, meeting after the event. Pick any, change any time.' },
+            { icon: <MousePointerClick className="h-5 w-5" />, t: 'Tap to respond', b: 'Each startup has three options: pitch deck, meet today, schedule a call later. Pick any, change any time.' },
             { icon: <ShieldCheck className="h-5 w-5" />, t: 'RTIH reviews every request', b: ROUTING_NOTE + ' Meeting requests are expressions of interest, not bookings.' },
             { icon: <Radio className="h-5 w-5" />, t: 'Live interest board', b: 'See which funds have expressed interest in each startup, updated live.' },
           ].map((x) => (

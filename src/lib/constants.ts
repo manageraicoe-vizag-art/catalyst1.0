@@ -3,13 +3,13 @@ import type { ActionType, EventSettings } from './types'
 export const ACTION_LABEL: Record<ActionType, string> = {
   deck: 'Request pitch deck',
   meet_today: 'Request a meeting today',
-  meet_later: 'Request a meeting after the event',
+  meet_later: 'Schedule a call after the event',
 }
 
 export const ACTION_SHORT: Record<ActionType, string> = {
   deck: 'Pitch deck',
   meet_today: 'Meet today',
-  meet_later: 'Meet after event',
+  meet_later: 'Schedule a call later',
 }
 
 export const ACTION_HELP: Record<ActionType, string> = {
@@ -17,7 +17,7 @@ export const ACTION_HELP: Record<ActionType, string> = {
   meet_today:
     'An expression of interest, not a confirmed booking. If approved, the RTIH team will send you the room and time here.',
   meet_later:
-    'An expression of interest in a follow-up after Demo Day. The RTIH team will be in touch to arrange it.',
+    'An expression of interest in a call after Demo Day. The RTIH team will be in touch to arrange it.',
 }
 
 export const LIVE_DISCLAIMER =

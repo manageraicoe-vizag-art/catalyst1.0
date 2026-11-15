@@ -11,6 +11,9 @@ import type {
   Notice,
   Organiser,
   RequestHandling,
+  StageMode,
+  StageRow,
+  StageSnapshot,
   Startup,
   StartupPrivate,
   StartupStatus,
@@ -156,6 +159,8 @@ function friendly(msg: string): string {
   if (/rate limit/i.test(msg))
     return 'Too many sign-ins from this network right now. Please try again in a minute (organisers: raise the anonymous sign-in rate limit in Supabase → Authentication → Rate Limits).'
   if (/invalid login credentials/i.test(msg)) return 'Email or password is incorrect.'
+  if (/stage_(?:get|start_pitch|set|add_time|slide)|relation "public\.stage"|bucket not found/i.test(msg))
+    return 'The stage screen needs database update 005: run supabase/migrations/005_stage_display.sql in Supabase → SQL Editor.'
   if (/row-level security|permission denied/i.test(msg)) return 'You do not have access to do that.'
   return msg
 }
@@ -168,6 +173,7 @@ const TABLE_TOPIC: Record<string, Topic> = {
   live_interest: 'live',
   event_settings: 'settings',
   investors: 'investors',
+  stage: 'stage',
 }
 
 export class SupabaseStore implements Store {
@@ -309,7 +315,8 @@ export class SupabaseStore implements Store {
     if (!data.session) return null
     const who = check(await this.org.rpc('whoami_organiser')) as (Omit<Organiser, 'role'> & { role?: string }) | null
     if (!who) return null
-    return { email: who.email, name: who.name, role: who.role === 'editor' ? 'editor' : 'viewer' }
+    const role: Organiser['role'] = who.role === 'editor' || who.role === 'display' ? who.role : 'viewer'
+    return { email: who.email, name: who.name, role }
   }
 
   async organiserSignIn(email: string, password: string) {
@@ -448,12 +455,76 @@ export class SupabaseStore implements Store {
     return (check(await this.org.from('live_interest').select('*')) ?? []).map(toLive)
   }
 
+  // ---------- stage screen ----------
+  async getStage(): Promise<StageSnapshot> {
+    const asked = Date.now()
+    const res = (check(await this.inv.rpc('stage_get')) ?? {}) as { stage?: Row; now?: string }
+    const answered = Date.now()
+    const r = res.stage ?? {}
+    const stage: StageRow = {
+      startupId: r.startup_id ?? null,
+      mode: (r.mode as StageMode) ?? 'idle',
+      startedAt: r.started_at ?? new Date().toISOString(),
+      pitchSecs: r.pitch_secs ?? 300,
+      qaSecs: r.qa_secs ?? 300,
+      deckPage: r.deck_page ?? 1,
+      updatedAt: r.updated_at ?? '',
+    }
+    // server "now" was taken about halfway through the round trip
+    const serverOffsetMs = res.now ? Date.parse(res.now) - (asked + answered) / 2 : 0
+    return { stage, serverOffsetMs }
+  }
+
+  async orgStartPitch(id: string, pitchSecs: number, qaSecs: number) {
+    check(await this.org.rpc('stage_start_pitch', { p_id: id, p_pitch_secs: pitchSecs, p_qa_secs: qaSecs }))
+  }
+
+  async orgSetStage(mode: StageMode, startupId: string | null, pitchSecs: number, qaSecs: number) {
+    check(await this.org.rpc('stage_set', { p_mode: mode, p_startup: startupId, p_pitch_secs: pitchSecs, p_qa_secs: qaSecs }))
+  }
+
+  async orgStageAddTime(secs: number) {
+    check(await this.org.rpc('stage_add_time', { p_secs: secs }))
+  }
+
+  async orgStageSlide(page: number) {
+    check(await this.org.rpc('stage_slide', { p_page: page }))
+  }
+
+  async orgListDeckFiles() {
+    const { data, error } = await this.org.storage.from('decks').list('', { limit: 500 })
+    if (error) throw new Error(friendly(error.message))
+    const m = new Map<string, string>()
+    for (const f of data ?? []) {
+      if (f.name.endsWith('.pdf')) m.set(f.name.slice(0, -4), String(f.updated_at ?? f.id ?? f.name))
+    }
+    return m
+  }
+
+  async orgUploadDeck(startupId: string, file: File) {
+    const { error } = await this.org.storage
+      .from('decks')
+      .upload(`${startupId}.pdf`, file, { upsert: true, contentType: 'application/pdf', cacheControl: '60' })
+    if (error) throw new Error(friendly(error.message))
+  }
+
+  async orgDownloadDeck(startupId: string) {
+    const { data, error } = await this.org.storage.from('decks').download(`${startupId}.pdf`)
+    if (error || !data) return null
+    return data.arrayBuffer()
+  }
+
+  async orgDeleteDeck(startupId: string) {
+    const { error } = await this.org.storage.from('decks').remove([`${startupId}.pdf`])
+    if (error) throw new Error(friendly(error.message))
+  }
+
   subscribe(audience: Audience, cb: (topic: Topic) => void) {
     const client = audience === 'organiser' ? this.org : this.inv
     const tables =
       audience === 'organiser'
         ? Object.keys(TABLE_TOPIC)
-        : ['startups', 'notices', 'live_interest', 'event_settings', 'requests']
+        : ['startups', 'notices', 'live_interest', 'event_settings', 'requests', 'stage']
     let channel = client.channel(`rtih-${audience}-${Math.random().toString(36).slice(2, 8)}`)
     for (const table of tables) {
       channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => cb(TABLE_TOPIC[table]!))

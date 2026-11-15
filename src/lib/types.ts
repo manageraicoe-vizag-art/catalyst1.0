@@ -126,7 +126,8 @@ export interface LiveInterest {
   updatedAt: string
 }
 
-export type OrganiserRole = 'editor' | 'viewer'
+/** editor: full control · viewer: read-only overview · display: the projector login (stage screen only) */
+export type OrganiserRole = 'editor' | 'viewer' | 'display'
 
 /** An investor opened a startup's deck (organiser analytics). */
 export interface DeckView {
@@ -154,3 +155,27 @@ export type Topic =
   | 'investors'
   | 'private'
   | 'deckViews'
+  | 'stage'
+  | 'decks'
+
+// ---------- stage screen ----------
+
+/** idle: schedule on screen · running: pitch → Q&A → investor interest · break: lunch */
+export type StageMode = 'idle' | 'running' | 'break'
+
+/** The one shared stage row: editors drive it, every screen follows it. Times are server time. */
+export interface StageRow {
+  startupId: string | null
+  mode: StageMode
+  startedAt: string
+  pitchSecs: number
+  qaSecs: number
+  deckPage: number
+  updatedAt: string
+}
+
+export interface StageSnapshot {
+  stage: StageRow
+  /** server clock minus this device's clock, so every screen counts down together */
+  serverOffsetMs: number
+}
