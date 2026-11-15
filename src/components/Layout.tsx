@@ -18,24 +18,29 @@ import { isDemo } from '../lib/store'
 import { SiteFooter } from './Decor'
 import { cn } from '../lib/utils'
 
-/** Header brand: RTIH Visakhapatnam (host) first, then the Catalyst 1.0 wordmark. */
-export function Brand({ to = '/', sub, compact }: { to?: string; sub?: string; compact?: boolean }) {
+/** Header brand, one line: RTIH Visakhapatnam | Catalyst 1.0 */
+export function Brand({ to = '/', compact }: { to?: string; sub?: string; compact?: boolean }) {
   return (
-    <Link to={to} className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="RTIH Visakhapatnam · Catalyst 1.0">
+    <Link
+      to={to}
+      className={cn('flex min-w-0 shrink-0 items-center', compact ? 'gap-2 max-[379px]:gap-1.5 sm:gap-3' : 'gap-2.5 sm:gap-3')}
+      aria-label="RTIH Visakhapatnam · Catalyst 1.0"
+    >
       <img
         src="./brand/rtih-visakhapatnam.png"
         alt="RTIH Visakhapatnam"
         width={340}
         height={77}
-        className="h-7 w-auto shrink-0 sm:h-8"
+        className={cn('w-auto shrink-0', compact ? 'h-6 max-[379px]:h-5 sm:h-8' : 'h-7 sm:h-8')}
       />
-      <span className={cn('h-8 w-px shrink-0 bg-slate-300', compact && 'hidden sm:block')} aria-hidden />
-      <div className={cn('min-w-0 leading-tight', compact && 'hidden sm:block')}>
-        <img src="./brand/catalyst-wordmark.png" alt="Catalyst 1.0" width={606} height={46} className="h-[13px] w-auto sm:h-[16px]" />
-        <p className="mt-1 truncate font-display text-[10px] uppercase tracking-[0.18em] text-slate-500 sm:text-[11px]">
-          {sub ?? 'Demo Day · 16 Nov'}
-        </p>
-      </div>
+      <span className={cn('w-px shrink-0 bg-slate-400', compact ? 'h-5 max-[379px]:h-4 sm:h-7' : 'h-6 sm:h-7')} aria-hidden />
+      <img
+        src="./brand/catalyst-wordmark.png"
+        alt="Catalyst 1.0"
+        width={606}
+        height={46}
+        className={cn('w-auto shrink-0', compact ? 'h-[11px] max-[379px]:h-[9px] sm:h-[16px]' : 'h-[14px] sm:h-[16px]')}
+      />
     </Link>
   )
 }
@@ -58,9 +63,10 @@ interface NavItem {
   end?: boolean
 }
 
-function TopNav({ items }: { items: NavItem[] }) {
+/** `from`: the width at which the top tabs replace the bottom tab bar */
+function TopNav({ items, from = 'md' }: { items: NavItem[]; from?: 'md' | 'xl' }) {
   return (
-    <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+    <nav className={cn('hidden items-center gap-1', from === 'xl' ? 'xl:flex' : 'md:flex')} aria-label="Main">
       {items.map((it) => (
         <NavLink
           key={it.to}
@@ -84,10 +90,10 @@ function TopNav({ items }: { items: NavItem[] }) {
   )
 }
 
-function BottomNav({ items }: { items: NavItem[] }) {
+function BottomNav({ items, from = 'md' }: { items: NavItem[]; from?: 'md' | 'xl' }) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-black/90 backdrop-blur md:hidden pb-safe"
+      className={cn('fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-black/90 backdrop-blur pb-safe', from === 'xl' ? 'xl:hidden' : 'md:hidden')}
       aria-label="Main"
     >
       <div className="mx-auto flex max-w-lg">
@@ -171,20 +177,20 @@ export function OrganiserShell({
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-black/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4">
           <Brand to="/organiser" sub="Organiser dashboard" compact />
-          <TopNav items={items} />
-          <div className="flex items-center gap-1">
+          <TopNav items={items} from="xl" />
+          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
             {viewOnly && (
               <span
-                className="mr-1 inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800 ring-1 ring-inset ring-sky-200"
+                className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-800 ring-1 ring-inset ring-sky-200 sm:mr-1 sm:px-2"
                 title="Your organiser access is read-only"
               >
-                <Eye className="h-3 w-3" aria-hidden /> View only
+                <Eye className="h-3 w-3" aria-hidden /> <span className="hidden sm:inline">View only</span>
               </span>
             )}
             <NavLink
               to="/organiser/settings"
               className={({ isActive }) =>
-                cn('rounded-lg p-2', isActive ? 'bg-brand-50 text-brand-900' : 'text-slate-500 hover:bg-slate-100')
+                cn('rounded-lg p-1.5 sm:p-2', isActive ? 'bg-brand-50 text-brand-900' : 'text-slate-500 hover:bg-slate-100')
               }
               aria-label="Settings"
               title="Settings"
@@ -193,7 +199,7 @@ export function OrganiserShell({
             </NavLink>
             <button
               onClick={onSignOut}
-              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 sm:p-2"
               aria-label="Sign out"
               title={`Sign out ${who}`}
             >
@@ -203,8 +209,8 @@ export function OrganiserShell({
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 pb-10 pt-4 md:pt-6">{children}</main>
-      <SiteFooter className="pb-28 md:pb-10" />
-      <BottomNav items={mobileItems} />
+      <SiteFooter className="pb-28 xl:pb-10" />
+      <BottomNav items={mobileItems} from="xl" />
     </div>
   )
 }
