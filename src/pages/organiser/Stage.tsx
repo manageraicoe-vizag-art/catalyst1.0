@@ -27,7 +27,7 @@ import { QrCode } from '../../components/Qr'
 import { Spinner } from '../../components/ui'
 import { useOrganiser } from '../../context/Organiser'
 import { ACTION_SHORT, LIVE_DISCLAIMER, ROUTING_NOTE } from '../../lib/constants'
-import { deckSource } from '../../lib/deckSource'
+import { deckSource, probeDeckLink } from '../../lib/deckSource'
 import { fetchDeck } from '../../lib/decks'
 import { getLocalDeck, putLocalDeck, saveLocalDeck } from '../../lib/localDecks'
 import { closePdf, openPdf, type PDFDocumentProxy } from '../../lib/pdf'
@@ -146,12 +146,25 @@ function Stage() {
 
   // no PDF: show the startup's deck link instead (Google Slides plays with the clicker; Drive/Canva/web pages scroll)
   const linkUrl = deckId ? privates.get(deckId)?.deckUrl?.trim() ?? '' : ''
+  const linkSource = useMemo(() => (linkUrl ? deckSource(linkUrl) : null), [linkUrl])
   const frameSrc = useMemo(() => {
-    const src = linkUrl ? deckSource(linkUrl) : null
+    const src = linkSource
     if (!src) return null
     if (src.kind === 'slides' || src.kind === 'drive' || src.kind === 'frame') return src.embed
     return src.kind === 'pdf' ? src.fetchUrl : null
-  }, [linkUrl])
+  }, [linkSource])
+  // never put Google's sign-in / error page on the projector: only embed links this screen can actually open
+  const [linkCheck, setLinkCheck] = useState<{ url: string; ok: boolean } | null>(null)
+  useEffect(() => {
+    if (!linkSource || !frameSrc) return
+    let cancelled = false
+    void probeDeckLink(linkSource).then((ok) => !cancelled && setLinkCheck({ url: linkUrl, ok }))
+    return () => {
+      cancelled = true
+    }
+  }, [linkSource, frameSrc, linkUrl])
+  const linkOk = !!frameSrc && linkCheck?.url === linkUrl && linkCheck.ok
+  const linkBlocked = !!frameSrc && linkCheck?.url === linkUrl && !linkCheck.ok
   const frameRef = useRef<HTMLIFrameElement>(null)
   useEffect(
     () => () => {
@@ -182,7 +195,7 @@ function Stage() {
   const deckOn = !!doc && showDeck && live
   const deckOnRef = useRef(deckOn)
   deckOnRef.current = deckOn
-  const frameOn = !doc && checked === deckId && !!frameSrc && showDeck && live
+  const frameOn = !doc && checked === deckId && linkOk && showDeck && live
   const frameOnRef = useRef(frameOn)
   frameOnRef.current = frameOn
   const totalRef = useRef(total)
@@ -292,10 +305,12 @@ function Stage() {
         nextUp={nextUp}
         slots={slots}
         missingDeck={
-          checked === deckId && !doc && !frameSrc && controls ? (
+          checked === deckId && !doc && (!frameSrc || linkBlocked) && controls ? (
             <div className="mt-[4vh] inline-flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/60 bg-amber-950/60 px-4 py-3 text-base text-amber-100">
               <span>
-                No pitch deck for {onStage.name} yet.{' '}
+                {linkBlocked
+                  ? `${onStage.name}’s deck link is not shared publicly, so it can’t be shown.`
+                  : `No pitch deck for ${onStage.name} yet.`}{' '}
                 {canEdit ? 'Load the PDF here (it is uploaded for every screen),' : 'Load the PDF here,'} or upload it in Pitch queue → Upload deck PDFs.
               </span>
               <button
@@ -396,6 +411,9 @@ function Stage() {
             </Ctl>
           )}
           {canEdit && <span className="mx-1 h-6 w-px bg-slate-200" aria-hidden />}
+          <span className="px-2 text-xs text-slate-500" title="Deck PDFs uploaded for the projector that this screen can see">
+            {deckFiles.size} deck PDF{deckFiles.size === 1 ? '' : 's'} ready
+          </span>
           <Ctl icon={full ? Minimize : Maximize} onClick={toggleFull}>
             {full ? 'Exit full screen' : 'Full screen'}
           </Ctl>

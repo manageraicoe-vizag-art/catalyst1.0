@@ -14,8 +14,8 @@ import { deckEmbed } from './utils'
  */
 export type DeckSource =
   | { kind: 'pdf'; fetchUrl: string; open: string; download: string }
-  | { kind: 'drive'; embed: string; open: string; download: string }
-  | { kind: 'slides'; embed: string; open: string; download: string }
+  | { kind: 'drive'; id: string; embed: string; open: string; download: string }
+  | { kind: 'slides'; id: string; embed: string; open: string; download: string }
   | { kind: 'frame'; embed: string; open: string }
   | { kind: 'link'; open: string }
   | { kind: 'none' }
@@ -27,6 +27,7 @@ export function deckSource(url: string): DeckSource {
   if (slides)
     return {
       kind: 'slides',
+      id: slides[1],
       embed: `https://docs.google.com/presentation/d/${slides[1]}/embed?start=false&loop=false&delayms=60000&rm=minimal`,
       open: u,
       download: `https://docs.google.com/presentation/d/${slides[1]}/export/pdf`,
@@ -37,6 +38,7 @@ export function deckSource(url: string): DeckSource {
   if (driveFile)
     return {
       kind: 'drive',
+      id: driveFile[1],
       embed: `https://drive.google.com/file/d/${driveFile[1]}/preview`,
       open: u,
       download: `https://drive.usercontent.google.com/download?id=${driveFile[1]}&export=download`,
@@ -44,4 +46,32 @@ export function deckSource(url: string): DeckSource {
   if (/^https?:\/\/[^?#]+\.pdf(?:[?#].*)?$/i.test(u)) return { kind: 'pdf', fetchUrl: u, open: u, download: u }
   const d = deckEmbed(u)
   return d.embed ? { kind: 'frame', embed: d.embed, open: d.open } : { kind: 'link', open: d.open }
+}
+
+/**
+ * Can this device show the deck link? A Google Slides / Drive file that is not shared publicly only shows
+ * Google's sign-in or error page, so check first: Google serves a thumbnail image only for files this browser
+ * may open (a cross-site image's load / error is visible to the page, unlike an embedded page's contents).
+ * Other links are assumed fine.
+ */
+export function probeDeckLink(src: DeckSource, timeoutMs = 8000): Promise<boolean> {
+  const url =
+    src.kind === 'slides'
+      ? `https://docs.google.com/presentation/d/${src.id}/export/png`
+      : src.kind === 'drive'
+        ? `https://drive.google.com/thumbnail?id=${src.id}&sz=w64`
+        : null
+  if (!url) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const img = new Image()
+    const done = (ok: boolean) => {
+      window.clearTimeout(timer)
+      img.onload = img.onerror = null
+      resolve(ok)
+    }
+    const timer = window.setTimeout(() => done(false), timeoutMs)
+    img.onload = () => done(img.naturalWidth > 0)
+    img.onerror = () => done(false)
+    img.src = url
+  })
 }

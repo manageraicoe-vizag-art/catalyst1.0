@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Download, ExternalLink, FileUp, Loader2, Maximize, Minimize, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { deckSource } from '../lib/deckSource'
+import { deckSource, probeDeckLink } from '../lib/deckSource'
 import { useOrganiser } from '../context/Organiser'
 import { fetchDeck } from '../lib/decks'
 import { getLocalDeck, putLocalDeck, removeLocalDeck, saveLocalDeck } from '../lib/localDecks'
@@ -102,6 +102,12 @@ export function DeckPresenter({ startup, deckUrl, onClose }: { startup: Startup;
         } catch {
           if (!cancelled) setMode({ kind: 'frame', src: source.fetchUrl, native: false, note: `This PDF link can only be shown as a page here. ${LAPTOP_TIP}` })
         }
+      } else if ((source.kind === 'drive' || source.kind === 'slides') && !(await probeDeckLink(source))) {
+        if (!cancelled)
+          setMode({
+            kind: 'link',
+            note: 'This Google deck is not shared publicly, so it would only show Google’s sign-in or error page. Ask the startup to share it as “Anyone with the link”, or load their PDF.',
+          })
       } else if (source.kind === 'drive') {
         setMode({ kind: 'frame', src: source.embed, native: false, note: `Google Drive’s viewer shows the slides as one scrolling page, so the clicker won’t step through them. ${LAPTOP_TIP}` })
       } else if (source.kind === 'slides') {
