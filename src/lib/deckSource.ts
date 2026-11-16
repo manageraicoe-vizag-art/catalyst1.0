@@ -75,3 +75,13 @@ export function probeDeckLink(src: DeckSource, timeoutMs = 8000): Promise<boolea
     img.src = url
   })
 }
+
+/** File picker filter for decks: PDFs, plus slide files so we can explain how to convert them. */
+export const DECK_FILE_ACCEPT = 'application/pdf,.pdf,.ppt,.pptx,.key,.odp'
+
+/** Why a picked file cannot be shown, in words an organiser can act on. */
+export function notAPdfMessage(name: string): string {
+  return /\.(pptx?|key|odp)$/i.test(name)
+    ? `“${name}” is a slides file. Browsers can only show PDFs: open it and save as PDF (PowerPoint: File → Save As → PDF; Keynote: File → Export To → PDF; Google Slides: File → Download → PDF), then load the PDF.`
+    : `“${name}” is not a PDF that can be shown.`
+}

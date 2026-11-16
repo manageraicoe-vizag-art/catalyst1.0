@@ -4,6 +4,7 @@ import { DeckPresenter } from '../../components/DeckPresenter'
 import { Badge, Button, EmptyState, Modal, PageHeader } from '../../components/ui'
 import { useOrganiser } from '../../context/Organiser'
 import { useToast } from '../../context/Toast'
+import { DECK_FILE_ACCEPT } from '../../lib/deckSource'
 import { listLocalDeckIds } from '../../lib/localDecks'
 import {
   EVENT_SCHEDULE,
@@ -198,7 +199,7 @@ export function QueuePage() {
             <input
               ref={deckInput}
               type="file"
-              accept="application/pdf,.pdf"
+              accept={DECK_FILE_ACCEPT}
               multiple
               className="hidden"
               onChange={(e) => {

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Badge, Button, Modal, Select } from '../../components/ui'
 import { useOrganiser } from '../../context/Organiser'
 import { useToast } from '../../context/Toast'
+import { notAPdfMessage } from '../../lib/deckSource'
 import { putLocalDeck } from '../../lib/localDecks'
 import { EVENT_SCHEDULE } from '../../lib/stage'
 import { store } from '../../lib/store'
@@ -56,7 +57,7 @@ export function DeckUploadDialog({ files, onClose }: { files: File[]; onClose: (
       set(i, { state: 'uploading', error: undefined })
       try {
         const data = await r.file.arrayBuffer()
-        if (new TextDecoder().decode(new Uint8Array(data, 0, Math.min(5, data.byteLength))) !== '%PDF-') throw new Error('Not a PDF file')
+        if (new TextDecoder().decode(new Uint8Array(data, 0, Math.min(5, data.byteLength))) !== '%PDF-') throw new Error(notAPdfMessage(r.file.name))
         await store.orgUploadDeck(r.startupId, r.file)
         set(i, { state: 'done' })
         ok++

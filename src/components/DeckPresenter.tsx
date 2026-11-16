@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Download, ExternalLink, FileUp, Loader2, Maximize, Minimize, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { deckSource, probeDeckLink } from '../lib/deckSource'
+import { DECK_FILE_ACCEPT, deckSource, notAPdfMessage, probeDeckLink } from '../lib/deckSource'
 import { useOrganiser } from '../context/Organiser'
 import { fetchDeck } from '../lib/decks'
 import { getLocalDeck, putLocalDeck, removeLocalDeck, saveLocalDeck } from '../lib/localDecks'
@@ -140,7 +140,7 @@ export function DeckPresenter({ startup, deckUrl, onClose }: { startup: Startup;
       data = await f.arrayBuffer()
       d = await openPdf(data)
     } catch {
-      return setMode({ kind: 'error', note: `“${f.name}” could not be opened as a PDF.` })
+      return setMode({ kind: 'error', note: notAPdfMessage(f.name) })
     }
     setPage(1)
     setBlank(false)
@@ -331,7 +331,7 @@ export function DeckPresenter({ startup, deckUrl, onClose }: { startup: Startup;
         <input
           ref={fileRef}
           type="file"
-          accept="application/pdf,.pdf"
+          accept={DECK_FILE_ACCEPT}
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0]

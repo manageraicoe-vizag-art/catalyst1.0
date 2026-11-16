@@ -27,7 +27,7 @@ import { QrCode } from '../../components/Qr'
 import { Spinner } from '../../components/ui'
 import { useOrganiser } from '../../context/Organiser'
 import { ACTION_SHORT, LIVE_DISCLAIMER, ROUTING_NOTE } from '../../lib/constants'
-import { deckSource, probeDeckLink } from '../../lib/deckSource'
+import { DECK_FILE_ACCEPT, deckSource, notAPdfMessage, probeDeckLink } from '../../lib/deckSource'
 import { fetchDeck } from '../../lib/decks'
 import { getLocalDeck, putLocalDeck, saveLocalDeck } from '../../lib/localDecks'
 import { closePdf, openPdf, type PDFDocumentProxy } from '../../lib/pdf'
@@ -123,7 +123,7 @@ function Stage() {
     try {
       closePdf(await openPdf(data))
     } catch {
-      return setLoadNote(`“${f.name}” is not a PDF that can be shown.`)
+      return setLoadNote(notAPdfMessage(f.name))
     }
     let shared = false
     if (canEdit) {
@@ -336,7 +336,7 @@ function Stage() {
       <input
         ref={fileRef}
         type="file"
-        accept="application/pdf,.pdf"
+        accept={DECK_FILE_ACCEPT}
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0]
