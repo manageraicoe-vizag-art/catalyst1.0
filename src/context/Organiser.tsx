@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { DEFAULT_SETTINGS } from '../lib/constants'
 import { store } from '../lib/store'
 import type {
+  CrmActivity,
+  CrmConnection,
   DeckView,
   EventSettings,
   InterestRequest,
@@ -37,6 +39,11 @@ interface OrganiserState {
   stageError: string | null
   /** deck PDFs ready for the projector: startup id → version */
   deckFiles: Map<string, string>
+  /** CRM: investor ↔ startup connections and their timelines */
+  connections: CrmConnection[]
+  activities: CrmActivity[]
+  /** why the CRM could not be loaded (e.g. database update 007 not installed yet) */
+  crmError: string | null
   /** request ids that arrived (or changed) since this dashboard opened, for highlighting */
   fresh: Set<string>
   signIn: (email: string, secret: string) => Promise<void>
@@ -63,6 +70,9 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
   const [stage, setStage] = useState<StageSnapshot | null>(null)
   const [stageError, setStageError] = useState<string | null>(null)
   const [deckFiles, setDeckFiles] = useState<Map<string, string>>(new Map())
+  const [connections, setConnections] = useState<CrmConnection[]>([])
+  const [activities, setActivities] = useState<CrmActivity[]>([])
+  const [crmError, setCrmError] = useState<string | null>(null)
   const [fresh, setFresh] = useState<Set<string>>(new Set())
   const seen = useRef<Map<string, string> | null>(null)
 
@@ -132,6 +142,16 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
           case 'decks':
             setDeckFiles(await store.orgListDeckFiles())
             break
+          case 'crm':
+            try {
+              const [c, a] = await Promise.all([store.orgListConnections(), store.orgListActivities()])
+              setConnections(c)
+              setActivities(a)
+              setCrmError(null)
+            } catch (e) {
+              setCrmError((e as Error).message)
+            }
+            break
         }
       } catch (e) {
         console.warn('organiser refresh failed', topic, e)
@@ -140,7 +160,7 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
     [ingestRequests],
   )
 
-  const ALL: Topic[] = useMemo(() => ['settings', 'startups', 'private', 'investors', 'requests', 'handling', 'notices', 'live', 'deckViews', 'stage', 'decks'], [])
+  const ALL: Topic[] = useMemo(() => ['settings', 'startups', 'private', 'investors', 'requests', 'handling', 'notices', 'live', 'deckViews', 'stage', 'decks', 'crm'], [])
 
   const reload = useCallback(
     async (topic?: Topic) => {
@@ -231,13 +251,16 @@ export function OrganiserProvider({ children }: { children: ReactNode }) {
       stage,
       stageError,
       deckFiles,
+      connections,
+      activities,
+      crmError,
       fresh,
       signIn,
       signOut,
       reload,
       setStartups,
     }),
-    [ready, organiser, settings, startups, privates, investors, requests, handling, notices, live, deckViews, stage, stageError, deckFiles, fresh, signIn, signOut, reload],
+    [ready, organiser, settings, startups, privates, investors, requests, handling, notices, live, deckViews, stage, stageError, deckFiles, connections, activities, crmError, fresh, signIn, signOut, reload],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

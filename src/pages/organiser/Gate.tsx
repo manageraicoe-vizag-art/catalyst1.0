@@ -4,18 +4,21 @@ import { Link, Navigate } from 'react-router-dom'
 import { Brand, DemoBanner, OrganiserShell } from '../../components/Layout'
 import { Button, Field, Input, Notice, Spinner } from '../../components/ui'
 import { useOrganiser } from '../../context/Organiser'
+import { ymd } from './crm/model'
 import { isDemo } from '../../lib/store'
 import { DEMO_DISPLAY_PASSCODE, DEMO_ORGANISER_PASSCODE, DEMO_VIEWER_PASSCODE } from '../../lib/store/local'
 
 export function OrganiserGate({ children }: { children: ReactNode }) {
-  const { ready, organiser, canEdit, signOut, requests, handling } = useOrganiser()
+  const { ready, organiser, canEdit, signOut, requests, handling, activities } = useOrganiser()
   if (!ready) return <Spinner />
   if (!organiser) return <OrganiserLogin />
   // the projector login (admin2) only ever shows the stage screen
   if (organiser.role === 'display') return <Navigate to="/organiser/stage" replace />
   const pending = requests.filter((r) => r.active && (handling.get(r.id)?.status ?? 'new') === 'new').length
+  const today = ymd(new Date())
+  const crmDue = activities.filter((a) => a.kind === 'followup' && !a.doneAt && a.dueOn && a.dueOn <= today).length
   return (
-    <OrganiserShell pendingCount={pending} onSignOut={signOut} who={organiser.email} viewOnly={!canEdit}>
+    <OrganiserShell pendingCount={pending} crmDue={crmDue} onSignOut={signOut} who={organiser.email} viewOnly={!canEdit}>
       {children}
     </OrganiserShell>
   )

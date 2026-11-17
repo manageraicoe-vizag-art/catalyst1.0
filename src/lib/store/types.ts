@@ -1,5 +1,7 @@
 import type {
   ActionType,
+  CrmActivity,
+  CrmConnection,
   DeckView,
   EventSettings,
   InterestRequest,
@@ -21,6 +23,13 @@ export type StartupDraft = Omit<Startup, 'id' | 'position' | 'updatedAt' | 'stat
   Partial<Pick<Startup, 'id' | 'position' | 'status' | 'hidden' | 'deckAvailable'>>
 
 export type PrivateDraft = Omit<StartupPrivate, 'startupId'>
+
+export type CrmConnectionDraft = Pick<CrmConnection, 'investorId' | 'startupId'> &
+  Partial<Pick<CrmConnection, 'stage' | 'priority' | 'owner' | 'source' | 'ticket' | 'summary' | 'createdBy'>>
+export type CrmConnectionPatch = Partial<Pick<CrmConnection, 'stage' | 'priority' | 'owner' | 'ticket' | 'summary'>>
+export type CrmActivityDraft = Pick<CrmActivity, 'connectionId' | 'kind'> &
+  Partial<Pick<CrmActivity, 'body' | 'dueOn' | 'doneAt' | 'owner' | 'createdBy'>>
+export type CrmActivityPatch = Partial<Pick<CrmActivity, 'body' | 'dueOn' | 'doneAt' | 'owner'>>
 
 export type Audience = 'investor' | 'organiser'
 
@@ -100,6 +109,20 @@ export interface Store {
   orgUploadDeck(startupId: string, file: File): Promise<void>
   orgDownloadDeck(startupId: string): Promise<ArrayBuffer | null>
   orgDeleteDeck(startupId: string): Promise<void>
+
+  // ---- CRM (organisers; editors write) ----
+  orgListConnections(): Promise<CrmConnection[]>
+  /** Adds connections; pairs already in the CRM are skipped. Returns the ones added. */
+  orgAddConnections(drafts: CrmConnectionDraft[]): Promise<CrmConnection[]>
+  orgUpdateConnection(id: string, patch: CrmConnectionPatch): Promise<CrmConnection>
+  /** Removes a connection and its whole timeline. */
+  orgDeleteConnection(id: string): Promise<void>
+  orgListActivities(): Promise<CrmActivity[]>
+  orgAddActivities(drafts: CrmActivityDraft[]): Promise<CrmActivity[]>
+  orgUpdateActivity(id: string, patch: CrmActivityPatch): Promise<CrmActivity>
+  orgDeleteActivity(id: string): Promise<void>
+  /** Interest cleared by queue restarts (update 006), so it can still go into the CRM. */
+  orgListArchivedRequests(): Promise<InterestRequest[]>
 
   /** Calls `cb` when data in a topic may have changed (realtime or cross-tab). */
   subscribe(audience: Audience, cb: (topic: Topic) => void): () => void

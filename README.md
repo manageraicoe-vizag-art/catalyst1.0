@@ -98,6 +98,26 @@ An editor (admin1) runs it from the **Pitch queue** page on any device:
 3. On the projector laptop open `…/#/organiser`, sign in as that user (it opens the stage screen), and press **F** for
    full screen. Demo mode: passcode `catalyst-display`.
 
+## CRM: follow-ups after the event
+
+Organiser dashboard → **CRM** (`#/organiser/crm`) tracks every investor ↔ startup connection from first interest to
+investment. Organisers see it; editors change it; investors and founders never see it.
+
+- **Add from event interest** turns what investors tapped (Meet today, Schedule a call later, Pitch deck) into one
+  connection per investor + startup, each with a first follow-up due in 1–3 days. Run it again any time; pairs already in
+  the CRM are skipped. Interest cleared by **Restart queue** can be included too.
+- **Pipeline:** New interest → Intro sent → Meeting set → Met → Due diligence → Term sheet → Invested / Passed. Drag cards
+  between columns, or change the stage in a connection; each change is logged.
+- **Follow-ups:** overdue, today, next 7 days, later, plus open connections with no next step. Tick off or push back
+  (+1 day / +1 week). The CRM tab shows how many are overdue or due today.
+- **Connection:** both contacts (email, call, WhatsApp), a one-click intro email to the investor with the founder in CC,
+  owner, priority, ticket / round, summary, what happened at the event, and a timeline of calls, emails, meetings and notes.
+- **All / By startup / By fund** views (including startups with no investor connection yet) and **Export CSV**.
+
+**One-time setup (live mode):** Supabase → *SQL Editor* → run
+[`supabase/migrations/007_crm.sql`](supabase/migrations/007_crm.sql) (safe to re-run; also part of `schema.sql`).
+Until then the CRM tab says it needs update 007 and everything else keeps working.
+
 ## Privacy (enforced in the database)
 
 Row-level security in [`supabase/schema.sql`](supabase/schema.sql) enforces this, not just the UI:
@@ -107,6 +127,7 @@ Row-level security in [`supabase/schema.sql`](supabase/schema.sql) enforces this
 - Room, time, deck links: organisers only, and the one investor once an organiser sends the notice.
 - Live board: fund name per startup only, visible to registered investors and organisers.
 - Startup contacts and deck links: organisers only.
+- CRM connections, follow-ups and notes: organisers only (editors write).
 - Organiser access: confirmed email on the `organisers` allow-list.
 
 **Personal links** (shown under *My requests → Use another device*, and per investor on the organiser

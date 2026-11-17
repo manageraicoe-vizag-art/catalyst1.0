@@ -3,6 +3,7 @@ import {
   CalendarClock,
   Eye,
   FlaskConical,
+  Handshake,
   Inbox,
   LayoutList,
   ListOrdered,
@@ -153,12 +154,15 @@ export function InvestorShell({ children, unread, name }: { children: ReactNode;
 export function OrganiserShell({
   children,
   pendingCount,
+  crmDue,
   onSignOut,
   who,
   viewOnly,
 }: {
   children: ReactNode
   pendingCount: number
+  /** CRM follow-ups overdue or due today */
+  crmDue?: number
   onSignOut: () => void
   who: string
   viewOnly?: boolean
@@ -167,6 +171,7 @@ export function OrganiserShell({
     { to: '/organiser', label: 'Requests', icon: <Inbox className="h-5 w-5" aria-hidden />, badge: pendingCount, end: true },
     { to: '/organiser/queue', label: 'Pitch queue', icon: <ListOrdered className="h-5 w-5" aria-hidden /> },
     { to: '/organiser/meetings', label: 'Meetings', icon: <CalendarClock className="h-5 w-5" aria-hidden /> },
+    { to: '/organiser/crm', label: 'CRM', icon: <Handshake className="h-5 w-5" aria-hidden />, badge: crmDue },
     { to: '/organiser/investors', label: 'Investors', icon: <Users className="h-5 w-5" aria-hidden /> },
     { to: '/organiser/overview', label: 'Overview', icon: <BarChart3 className="h-5 w-5" aria-hidden /> },
   ]

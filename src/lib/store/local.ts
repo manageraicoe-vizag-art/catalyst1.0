@@ -1,6 +1,8 @@
 import { DEFAULT_SETTINGS, STORAGE_PREFIX } from '../constants'
 import type {
   ActionType,
+  CrmActivity,
+  CrmConnection,
   DeckView,
   EventSettings,
   InterestRequest,
@@ -20,7 +22,16 @@ import type {
 import { getLocalDeck, listLocalDeckVersions, removeLocalDeck, saveLocalDeck } from '../localDecks'
 import { nowIso, token, uid } from '../utils'
 import { buildSeed } from './seed'
-import type { Audience, PrivateDraft, Store, StartupDraft } from './types'
+import type {
+  Audience,
+  CrmActivityDraft,
+  CrmActivityPatch,
+  CrmConnectionDraft,
+  CrmConnectionPatch,
+  PrivateDraft,
+  Store,
+  StartupDraft,
+} from './types'
 
 /** Demo passcodes for the organiser dashboard in DEMO mode only. */
 export const DEMO_ORGANISER_PASSCODE = 'catalyst'
@@ -41,13 +52,15 @@ interface DB {
   deckViews?: DeckView[]
   stage?: StageRow
   /** requests cleared by a queue restart, with their handling and notices */
+  crmConnections?: CrmConnection[]
+  crmActivities?: CrmActivity[]
   requestsArchive?: Array<InterestRequest & { archivedAt: string; handling: RequestHandling | null; notices: Notice[] }>
 }
 
 const DB_KEY = `${STORAGE_PREFIX}:demo-db`
 const ME_KEY = `${STORAGE_PREFIX}:demo-me`
 const ORG_KEY = `${STORAGE_PREFIX}:demo-org`
-const ALL_TOPICS: Topic[] = ['settings', 'startups', 'requests', 'handling', 'live', 'notices', 'investors', 'private', 'deckViews', 'stage', 'decks']
+const ALL_TOPICS: Topic[] = ['settings', 'startups', 'requests', 'handling', 'live', 'notices', 'investors', 'private', 'deckViews', 'stage', 'decks', 'crm']
 
 const IDLE_STAGE = (): StageRow => ({ startupId: null, mode: 'idle', startedAt: nowIso(), pitchSecs: 300, qaSecs: 300, deckPage: 1, updatedAt: nowIso() })
 
@@ -347,6 +360,7 @@ export class LocalStore implements Store {
       db.requests = db.requests.filter((r) => !reqIds.has(r.id))
       db.handling = db.handling.filter((h) => !reqIds.has(h.requestId))
       db.notices = db.notices.filter((n) => n.startupId !== id)
+      dropConnections(db, (c) => c.startupId === id)
     })
   }
 
@@ -431,6 +445,7 @@ export class LocalStore implements Store {
       db.requests = db.requests.filter((r) => r.investorId !== id)
       db.handling = db.handling.filter((h) => !reqIds.has(h.requestId))
       db.notices = db.notices.filter((n) => n.investorId !== id)
+      dropConnections(db, (c) => c.investorId === id)
     })
     if (this.meId() === id) safeSet(ME_KEY, null)
   }
@@ -639,6 +654,109 @@ export class LocalStore implements Store {
     this.bus.dispatchEvent(new Event('change'))
   }
 
+  // ---------- CRM ----------
+  async orgListConnections() {
+    this.requireOrg()
+    return this.read().crmConnections ?? []
+  }
+
+  async orgAddConnections(drafts: CrmConnectionDraft[]) {
+    this.requireEdit()
+    return this.mutate((db) => {
+      const list = (db.crmConnections ??= [])
+      const added: CrmConnection[] = []
+      for (const d of drafts) {
+        if (list.some((c) => c.investorId === d.investorId && c.startupId === d.startupId)) continue
+        if (!db.investors.some((i) => i.id === d.investorId) || !db.startups.some((s) => s.id === d.startupId))
+          throw new Error('That investor or startup no longer exists.')
+        const t = nowIso()
+        const c: CrmConnection = {
+          id: uid(),
+          investorId: d.investorId,
+          startupId: d.startupId,
+          stage: d.stage ?? 'new',
+          priority: d.priority ?? 'normal',
+          owner: (d.owner ?? '').trim(),
+          source: d.source ?? 'manual',
+          ticket: (d.ticket ?? '').trim(),
+          summary: d.summary ?? '',
+          createdBy: d.createdBy ?? '',
+          createdAt: t,
+          updatedAt: t,
+        }
+        list.push(c)
+        added.push(c)
+      }
+      return added
+    })
+  }
+
+  async orgUpdateConnection(id: string, patch: CrmConnectionPatch) {
+    this.requireEdit()
+    return this.mutate((db) => {
+      const c = db.crmConnections?.find((x) => x.id === id)
+      if (!c) throw new Error('This connection was removed.')
+      Object.assign(c, defined(patch), { updatedAt: nowIso() })
+      return { ...c }
+    })
+  }
+
+  async orgDeleteConnection(id: string) {
+    this.requireEdit()
+    this.mutate((db) => dropConnections(db, (c) => c.id === id))
+  }
+
+  async orgListActivities() {
+    this.requireOrg()
+    return this.read().crmActivities ?? []
+  }
+
+  async orgAddActivities(drafts: CrmActivityDraft[]) {
+    this.requireEdit()
+    return this.mutate((db) => {
+      const list = (db.crmActivities ??= [])
+      return drafts.map((d) => {
+        if (!db.crmConnections?.some((c) => c.id === d.connectionId)) throw new Error('This connection was removed.')
+        const a: CrmActivity = {
+          id: uid(),
+          connectionId: d.connectionId,
+          kind: d.kind,
+          body: d.body ?? '',
+          dueOn: d.dueOn || null,
+          doneAt: d.doneAt ?? null,
+          owner: (d.owner ?? '').trim(),
+          createdBy: d.createdBy ?? '',
+          createdAt: nowIso(),
+        }
+        list.push(a)
+        return a
+      })
+    })
+  }
+
+  async orgUpdateActivity(id: string, patch: CrmActivityPatch) {
+    this.requireEdit()
+    return this.mutate((db) => {
+      const a = db.crmActivities?.find((x) => x.id === id)
+      if (!a) throw new Error('This entry was removed.')
+      Object.assign(a, defined(patch))
+      if (a.dueOn === '') a.dueOn = null
+      return { ...a }
+    })
+  }
+
+  async orgDeleteActivity(id: string) {
+    this.requireEdit()
+    this.mutate((db) => {
+      db.crmActivities = (db.crmActivities ?? []).filter((a) => a.id !== id)
+    })
+  }
+
+  async orgListArchivedRequests() {
+    this.requireOrg()
+    return (this.read().requestsArchive ?? []).map(({ archivedAt: _a, handling: _h, notices: _n, ...r }) => r)
+  }
+
   subscribe(_audience: Audience, cb: (topic: Topic) => void) {
     const fire = () => ALL_TOPICS.forEach(cb)
     const onStorage = (e: StorageEvent) => {
@@ -678,4 +796,16 @@ function computeLive(db: DB): LiveInterest[] {
       byKey.set(key, { startupId: r.startupId, investorId: inv.id, fund: inv.fund, updatedAt: r.updatedAt })
   }
   return [...byKey.values()]
+}
+
+/** Removes connections (and their timelines) that match, as the database's "on delete cascade" does. */
+function dropConnections(db: DB, match: (c: CrmConnection) => boolean) {
+  const gone = new Set((db.crmConnections ?? []).filter(match).map((c) => c.id))
+  if (!gone.size) return
+  db.crmConnections = db.crmConnections!.filter((c) => !gone.has(c.id))
+  db.crmActivities = (db.crmActivities ?? []).filter((a) => !gone.has(a.connectionId))
+}
+
+function defined<T extends object>(o: T): Partial<T> {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>
 }

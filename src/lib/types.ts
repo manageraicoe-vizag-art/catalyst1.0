@@ -157,6 +157,7 @@ export type Topic =
   | 'deckViews'
   | 'stage'
   | 'decks'
+  | 'crm'
 
 // ---------- stage screen ----------
 
@@ -178,4 +179,48 @@ export interface StageSnapshot {
   stage: StageRow
   /** server clock minus this device's clock, so every screen counts down together */
   serverOffsetMs: number
+}
+
+// ---------- CRM (organisers only) ----------
+
+/** Where an investor ↔ startup connection is in the funding conversation. */
+export type CrmStage = 'new' | 'contacted' | 'meeting' | 'met' | 'diligence' | 'term_sheet' | 'invested' | 'passed'
+export const CRM_STAGES: CrmStage[] = ['new', 'contacted', 'meeting', 'met', 'diligence', 'term_sheet', 'invested', 'passed']
+export type CrmPriority = 'high' | 'normal' | 'low'
+/** The investor's event request it came from, or added by an organiser. */
+export type CrmSource = ActionType | 'manual'
+
+/** One investor + one startup, tracked from first interest to investment. */
+export interface CrmConnection {
+  id: string
+  investorId: string
+  startupId: string
+  stage: CrmStage
+  priority: CrmPriority
+  /** organiser responsible for the follow-up */
+  owner: string
+  source: CrmSource
+  /** ticket size / round notes */
+  ticket: string
+  summary: string
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** note / call / email / meeting / whatsapp: logged touchpoints · stage: automatic · followup: a to-do with a due date */
+export type CrmActivityKind = 'note' | 'call' | 'email' | 'meeting' | 'whatsapp' | 'stage' | 'followup'
+
+export interface CrmActivity {
+  id: string
+  connectionId: string
+  kind: CrmActivityKind
+  body: string
+  /** follow-ups: yyyy-mm-dd */
+  dueOn: string | null
+  /** follow-ups: when it was ticked off */
+  doneAt: string | null
+  owner: string
+  createdBy: string
+  createdAt: string
 }

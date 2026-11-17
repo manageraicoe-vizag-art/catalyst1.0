@@ -13,6 +13,7 @@ import { MePage } from './pages/Me'
 import { StartupDetailPage } from './pages/StartupDetail'
 import { StartupsPage } from './pages/Startups'
 import { OrganiserGate } from './pages/organiser/Gate'
+import { CrmPage } from './pages/organiser/crm/CrmPage'
 import { InvestorsPage } from './pages/organiser/Investors'
 import { MeetingsPage } from './pages/organiser/Meetings'
 import { OverviewPage } from './pages/organiser/Overview'
@@ -90,6 +91,7 @@ function OrganiserRoutes() {
               <Route index element={<RequestsPage />} />
               <Route path="queue" element={<QueuePage />} />
               <Route path="meetings" element={<MeetingsPage />} />
+              <Route path="crm" element={<CrmPage />} />
               <Route path="investors" element={<InvestorsPage />} />
               <Route path="overview" element={<OverviewPage />} />
               <Route path="settings" element={<SettingsPage />} />

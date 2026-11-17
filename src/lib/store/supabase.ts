@@ -2,6 +2,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { DEFAULT_SETTINGS, STORAGE_PREFIX } from '../constants'
 import type {
   ActionType,
+  CrmActivity,
+  CrmConnection,
   DeckView,
   EventSettings,
   InterestRequest,
@@ -19,7 +21,16 @@ import type {
   StartupStatus,
   Topic,
 } from '../types'
-import type { Audience, PrivateDraft, Store, StartupDraft } from './types'
+import type {
+  Audience,
+  CrmActivityDraft,
+  CrmActivityPatch,
+  CrmConnectionDraft,
+  CrmConnectionPatch,
+  PrivateDraft,
+  Store,
+  StartupDraft,
+} from './types'
 
 type Row = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -148,6 +159,49 @@ const toLive = (r: Row): LiveInterest => ({
   updatedAt: r.updated_at,
 })
 
+const toConnection = (r: Row): CrmConnection => ({
+  id: r.id,
+  investorId: r.investor_id,
+  startupId: r.startup_id,
+  stage: r.stage,
+  priority: r.priority,
+  owner: r.owner ?? '',
+  source: r.source,
+  ticket: r.ticket ?? '',
+  summary: r.summary ?? '',
+  createdBy: r.created_by ?? '',
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+})
+
+const toActivity = (r: Row): CrmActivity => ({
+  id: r.id,
+  connectionId: r.connection_id,
+  kind: r.kind,
+  body: r.body ?? '',
+  dueOn: r.due_on ?? null,
+  doneAt: r.done_at ?? null,
+  owner: r.owner ?? '',
+  createdBy: r.created_by ?? '',
+  createdAt: r.created_at,
+})
+
+/** Only the fields given, in database column names. */
+function crmRow(o: Record<string, unknown>): Row {
+  const cols: Record<string, string> = {
+    investorId: 'investor_id',
+    startupId: 'startup_id',
+    connectionId: 'connection_id',
+    dueOn: 'due_on',
+    doneAt: 'done_at',
+    createdBy: 'created_by',
+  }
+  const row: Row = {}
+  for (const [k, v] of Object.entries(o)) if (v !== undefined) row[cols[k] ?? k] = typeof v === 'string' && k !== 'body' && k !== 'summary' ? v.trim() : v
+  if (row.due_on === '') row.due_on = null
+  return row
+}
+
 function check<T>(res: { data: T; error: { message: string } | null }): T {
   if (res.error) throw new Error(friendly(res.error.message))
   return res.data
@@ -163,6 +217,8 @@ function friendly(msg: string): string {
     return 'Resetting interest needs database update 006: run supabase/migrations/006_interest_reset.sql in Supabase → SQL Editor.'
   if (/stage_(?:get|start_pitch|set|add_time|slide|show_results)|relation "public\.stage"|bucket not found/i.test(msg))
     return 'The stage screen needs database update 005: run supabase/migrations/005_stage_display.sql in Supabase → SQL Editor.'
+  if (/crm_connections|crm_activities/i.test(msg))
+    return 'The CRM needs database update 007: run supabase/migrations/007_crm.sql in Supabase → SQL Editor.'
   if (/row-level security|permission denied/i.test(msg)) return 'You do not have access to do that.'
   return msg
 }
@@ -529,6 +585,52 @@ export class SupabaseStore implements Store {
     if (error) throw new Error(friendly(error.message))
   }
 
+  // ---------- CRM ----------
+  async orgListConnections() {
+    return (check(await this.org.from('crm_connections').select('*')) ?? []).map(toConnection)
+  }
+
+  async orgAddConnections(drafts: CrmConnectionDraft[]) {
+    if (!drafts.length) return []
+    const rows = check(
+      await this.org
+        .from('crm_connections')
+        .upsert(drafts.map(crmRow), { onConflict: 'investor_id,startup_id', ignoreDuplicates: true, defaultToNull: false })
+        .select('*'),
+    )
+    return (rows ?? []).map(toConnection)
+  }
+
+  async orgUpdateConnection(id: string, patch: CrmConnectionPatch) {
+    return toConnection(check(await this.org.from('crm_connections').update(crmRow(patch)).eq('id', id).select('*').single()) as Row)
+  }
+
+  async orgDeleteConnection(id: string) {
+    check(await this.org.from('crm_connections').delete().eq('id', id))
+  }
+
+  async orgListActivities() {
+    return (check(await this.org.from('crm_activities').select('*')) ?? []).map(toActivity)
+  }
+
+  async orgAddActivities(drafts: CrmActivityDraft[]) {
+    if (!drafts.length) return []
+    return (check(await this.org.from('crm_activities').insert(drafts.map(crmRow), { defaultToNull: false }).select('*')) ?? []).map(toActivity)
+  }
+
+  async orgUpdateActivity(id: string, patch: CrmActivityPatch) {
+    return toActivity(check(await this.org.from('crm_activities').update(crmRow(patch)).eq('id', id).select('*').single()) as Row)
+  }
+
+  async orgDeleteActivity(id: string) {
+    check(await this.org.from('crm_activities').delete().eq('id', id))
+  }
+
+  async orgListArchivedRequests() {
+    const res = await this.org.from('requests_archive').select('*')
+    return res.error ? [] : (res.data ?? []).map(toRequest)
+  }
+
   subscribe(audience: Audience, cb: (topic: Topic) => void) {
     const client = audience === 'organiser' ? this.org : this.inv
     const tables =
@@ -540,6 +642,16 @@ export class SupabaseStore implements Store {
       channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => cb(TABLE_TOPIC[table]!))
     }
     channel.subscribe()
+    // CRM tables on their own channel: until update 007 is installed they do not exist, and that must not
+    // stop the other live updates
+    const crm =
+      audience === 'organiser'
+        ? client
+            .channel(`rtih-crm-${Math.random().toString(36).slice(2, 8)}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_connections' }, () => cb('crm'))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_activities' }, () => cb('crm'))
+            .subscribe()
+        : null
     // Realtime needs the latest access token (anonymous/organiser JWT) to apply RLS.
     const { data: sub } = client.auth.onAuthStateChange((_e, session) => {
       if (session?.access_token) client.realtime.setAuth(session.access_token)
@@ -547,6 +659,7 @@ export class SupabaseStore implements Store {
     return () => {
       sub.subscription.unsubscribe()
       void client.removeChannel(channel)
+      if (crm) void client.removeChannel(crm)
     }
   }
 }
